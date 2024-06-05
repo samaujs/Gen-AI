@@ -3,9 +3,11 @@ import json
 import streamlit as st
 import uuid
 import bedrock
+from datetime import datetime
 
 # Configure session state
-HEAD_ICON = "images/aws-lol.png"
+HEAD_ICON = "images/RAG_bot_86x78.png"
+# HEAD_ICON = "images/aws-lol.png"
 USER_ICON = "images/user-icon.png"
 AI_ICON = "images/ai-icon.png"
 
@@ -22,6 +24,13 @@ if "llm_chain" not in st.session_state:
 
     # Create an instance of the Chatbot class
     chatbot = bedrock.Chatbot(vectorstore)
+
+    # datetime object containing current date and time
+    now = datetime.now()
+
+    # dd/mm/YY H:M:S
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    print("Current date and time =", dt_string)
 
     st.session_state["llm_app"] = bedrock
     st.session_state["llm_chain"] = chatbot
@@ -68,10 +77,18 @@ def handle_input():
     llm_app = st.session_state["llm_app"]
 
     llm_response, prev_docs_chat_history_response = llm_chain.run_RAG(input)
+    modelId = 'cohere.command-r-plus-v1:0'
 
     # Handle the case for general questions that cannot be answered by Cohere RAG model
     if "do not have" in llm_response or "don\'t have" in llm_response or "do not know" in llm_response or "don\'t know" in llm_response :
         llm_response, memory_chat_history = llm_chain.run_GenModel(input)
+        modelId = 'anthropic.claude-3-sonnet-20240229-v1:0'
+
+    # Change thumbUp based on user input in the future
+    llm_chain.write_qa_to_dynamodb(modelId = modelId,
+                                   question = input,
+                                   answer = llm_response,
+                                   thumbUp = True)
 
     question_with_id = {
         "question": input,
@@ -120,5 +137,5 @@ with st.container():
 
 st.markdown("---")
 input = st.text_input(
-    "Hi, I am your AI Assistant with knowledge in Transformer models and Attention mechanism. Please ask any question.", key="input", on_change=handle_input
+    "Hi, I am BC, your AI Assistant with knowledge in Transformer models and Attention mechanism. Please ask any question.", key="input", on_change=handle_input
 )

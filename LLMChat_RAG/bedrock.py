@@ -6,6 +6,8 @@ from typing import List, Dict
 from unstructured.partition.html import partition_html
 from unstructured.chunking.title import chunk_by_title
 
+import datetime
+
 # LangChain with ConversationBufferMemory
 from langchain_aws import ChatBedrock
 from langchain.memory import ConversationBufferMemory
@@ -203,9 +205,9 @@ class Chatbot:
                 "k": 250,
                 "max_tokens": 1000,
             
-                "preamble": "You are an AI assistant with expertise in Transformers and Attention models. \
+                "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
                              You should say you do not know if you do not know and answer only if \
-                             you are very confident. Answer in number bulleted form.", 
+                             you are very confident. Organise the answers in a nice number bulleted format.", 
                 # "chat_history" is not used for "search_queries_only" with empty []
                 "message": message,
                 "search_queries_only": True,
@@ -232,9 +234,9 @@ class Chatbot:
                     "k": 250,
                     "max_tokens": 1000,
                 
-                    "preamble": "You are an AI assistant with expertise in Transformers and Attention models. \
+                    "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
                                  You should say you do not know if you do not know and answer only if \
-                                 you are very confident. Answer in number bulleted form.", 
+                                 you are very confident. Organise the answers in a nice number bulleted format.", 
                     
                     "chat_history": self.prev_docs_chat_history_response,
                     "message": message,
@@ -252,9 +254,9 @@ class Chatbot:
                     "k": 250,
                     "max_tokens": 1000,
                 
-                    "preamble": "You are an AI assistant with expertise in Transformers and Attention models. \
+                    "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
                                  You should say you do not know if you do not know and answer only if \
-                                 you are very confident. Answer in number bulleted form.", 
+                                 you are very confident. Organise the answers in a nice number bulleted format. Answer in a happy and cheerful tone.", 
                     
                     "chat_history": self.prev_docs_chat_history_response,
                     "message": message,
@@ -265,6 +267,7 @@ class Chatbot:
 
         # Print the chatbot response, citations, and documents
         docs_response_text = docs_response_body.get('text')
+        print("User:\n", message)
         print("Chatbot:\n", docs_response_text)
         citations = []
         cited_documents = []
@@ -289,7 +292,7 @@ class Chatbot:
                                     client=self.bedrock_runtime,
                                     model_id=modelId,
                                     region_name="us-east-1",
-                                    model_kwargs={"temperature": 0.0,
+                                    model_kwargs={"temperature": 0.1,
                                                   "top_p": 0.999,
                                                   "top_k": 250,
                     
@@ -298,9 +301,9 @@ class Chatbot:
                                                  },
                             )
 
-        prompt_template = """You are an AI assistant with expertise in stock market trends and share prices analysis.
+        prompt_template = """You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is tourism in ASEAN region and premium vacation planning.
                              You should say you do not know if you do not know and answer only if you are very confident.
-                             Answer in number bulleted form. 
+                             Organise the answers in a nice number bulleted format. Answer in a happy and cheerful tone.
 
                              Previous conversation:
                              {chat_history}
@@ -323,6 +326,34 @@ class Chatbot:
         print("\nLLM response to general question :\n", gen_llm_response)
 
         return gen_llm_response, self.memory_chat_history
+
+    def write_qa_to_dynamodb(self, modelId, question, answer, thumbUp):
+        # Configure boto3 client (replace with your credentials and region)
+        dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-1')
+        table = dynamodb.Table('GenAI-RAG-Chat-QA')
+
+        # Create a datetime object
+        current_datetime = datetime.datetime.now()
+
+        # Convert to string with desired format
+        formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")  # Adjust format string as needed
+        print(formatted_datetime)
+
+        # Prepare item data
+        item = {
+                'Model_Id'  : modelId,
+                'Timestamp' : formatted_datetime,
+                'Question'  : question,
+                'Answer'    : answer,
+                'ThumbUp'   : thumbUp
+        }
+
+        # Write data to DynamoDB
+        table.put_item(Item=item)
+
+        print(f"Successfully wrote Model_Id: {modelId}, Timestamp: {formatted_datetime}, and ThumbsUp: {thumbUp} to DynamoDB table.\n")
+        print(f"Question: \n{question}\n")
+        print(f"Answer: \n{answer}\n")
 
     def clear_mem_chat_history(self, chatbot):
         chatbot.memory_chat_history.clear()
@@ -362,7 +393,7 @@ if __name__ == "__main__":
     print("prev_docs_chat_history_response : ", prev_docs_chat_history_response)
     print()
 
-    if "do not have" in llm_response or "don\'t have" in llm_response or "do not know" in llm_response or "don\'t know" in llm_response:
+    if "do not have" in llm_response or "don\'t have" in llm_response or "don\'t know" in llm_response:
         gen_llm_response, memory_chat_history = chatbot.run_GenModel(message)
         print("\nLoad conversation memory :\n", memory_chat_history.load_memory_variables({}))
 
