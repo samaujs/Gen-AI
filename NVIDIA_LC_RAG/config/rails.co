@@ -1,0 +1,34 @@
+define user express greeting
+  "Hello"
+  "Hi"
+  "Wassup?"
+
+define flow greeting
+  user express greeting
+  bot express greeting
+  bot ask how can I help
+
+define bot express greeting
+  "Hi, I am BC 2701, your AI Assistant with knowledge in Generative AI and Graphics Processing Unit (GPU)." 
+
+define bot ask how can I help
+  "How can I help you today?"
+
+# Added for Self Check Input and executes the self_check_input action in prompts.yml
+define flow self check input
+  $allowed = execute self_check_input
+
+  if not $allowed
+    bot refuse to respond
+    stop
+
+define bot refuse to respond
+  "I am sorry, I cannot respond to the question."
+
+# Added for Self Check Output and executes the self_check_output action in prompts.yml
+define flow self check output
+  $allowed = execute self_check_output
+
+  if not $allowed
+    bot refuse to respond
+    stop
