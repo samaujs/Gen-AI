@@ -201,7 +201,7 @@ class Vectorstore:
 
 # Single prompt at a time for streamlit LLM app
 class Chatbot:
-    def __init__(self):
+    def __init__(self, model='meta/llama3-8b-instruct'):
         """
         Initializes an instance of the Chatbot class.
 
@@ -236,20 +236,20 @@ class Chatbot:
             openaiapi_key = getpass.getpass("Enter your OPENAI API key: ")
             os.environ["OPENAI_API_KEY"] = openaiapi_key
 
-        # Specifies the region for bedrock_runtime
-        # LLama3 Model
-        self.llama3_8b_instruct_llm = ChatNVIDIA(
-                                                 model="meta/llama3-8b-instruct",  # "google/gemma-7b",
-                                                 temperature=0.1,
-                                                 top_p=0.7,
-                                                 top_k=250,
-                                                 max_tokens=1000,  # 1024
+        # Create ChatNVIDIA based on selected Foundational Model
+        print(f"Create ChatNVIDIA based on selected Foundational Model : {model}")
+        self.selected_fm = ChatNVIDIA(
+                                      model=model,  # "google/gemma-7b",
+                                      temperature=0.1,
+                                      top_p=0.7,
+                                      top_k=250,
+                                      max_tokens=1000,  # 1024
 
-                                                 system="You are BC, an AI assistant model 2701 created by SAM. \
-                                                         You are an expert in Large Language Model, Generative AI and Graphics Processing Unit (GPU). \
-                                                         You should say you do not know if you do not know and answer only if you are very confident. \
-                                                         Answer in number bulleted format.",
-                                                )
+                                      system="You are BC, an AI assistant model 2701 created by SAM. \
+                                              You are an expert in Large Language Model, Generative AI and Graphics Processing Unit (GPU). \
+                                              You should say you do not know if you do not know and answer only if you are very confident. \
+                                              Answer in number bulleted format.",
+                                      )
 
         # Stores the chat history
         self.chat_history = []
@@ -322,10 +322,10 @@ class Chatbot:
         contextualize_q_prompt, qa_prompt = self.create_rag_prompt_templates()
 
         # Create history aware retriever
-        history_aware_retriever = create_history_aware_retriever(self.llama3_8b_instruct_llm, self.retriever, contextualize_q_prompt)
+        history_aware_retriever = create_history_aware_retriever(self.selected_fm, self.retriever, contextualize_q_prompt)
 
         # Create Question and Answer chain
-        question_answer_chain = create_stuff_documents_chain(self.llama3_8b_instruct_llm, qa_prompt)
+        question_answer_chain = create_stuff_documents_chain(self.selected_fm, qa_prompt)
 
         # Create RAG chain
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
@@ -355,10 +355,10 @@ class Chatbot:
         return message_response 
 
     def run_GenModel(self, message):
-        # Chatbot with Meta Llama3-8b-instruct as alternative LLM for general questions
+        # Chatbot with selected Foundational Model as alternative LLM for general questions
 
         # Store the conversation in chat_history
-        result = self.llama3_8b_instruct_llm.invoke(input=message)
+        result = self.selected_fm.invoke(input=message)
         gen_llm_response = result.content
 
         print("\nConversationID : {} with prev chat history :\n{}".format(self.conversation_id, self.prev_docs_chat_history_response))

@@ -11,7 +11,8 @@
 
 - Conversational LLM Chatbot with NVIDIA AI Foundation Endpoints, NeMo Guardrails and LangChain
 >   - Build Conversational chatbot with Chat history using LangChain Framework (eg. Prompts, Foundation Models).
->   - Large Language Model (LLM) with NVIDIA endpoint APIs (NV-Embed-QA, Meta Llama3).
+>   - Large Language Model (LLM) with NVIDIA  Nvidia Inference Microservice (NIM) API (NV-Embed-QA, Meta Llama3).
+>   - User selects the Foundation Model (Meta Llama3-8b, MistralAI Mixtral-8x7b and Google Gemma-7b) for Question and Answers task.
 >   - Craft prompts based on Context, Question and Chat history.
 >   - Implement Retrieval Augmented Generation (RAG) and Vector store with FAISS.
 >   - LangChain Conversational Chain, Document Chain and Retrieval Chain are used in to establish the user conversation.

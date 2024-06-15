@@ -7,12 +7,45 @@ from datetime import datetime
 import os
 
 # Configure session state
-HEAD_ICON = "images/RAG_bot_86x78.png"
-# HEAD_ICON = "images/Nvidia_ChatRAG.png"
+# HEAD_ICON = "images/RAG_bot_86x78.png"
+HEAD_ICON = "images/Nvidia_LC_464x216.png"
 USER_ICON = "images/user-icon.png"
-AI_ICON = "images/ai-icon.png"
+AI_ICON = "images/ai-icon_128x128.png"
 
-# Section 1 : Initializations
+# Section 1 : Write Main Header
+def write_top_bar():
+    col1, col2, col3 = st.columns([2.3, 10, 2.6])
+    with col1:
+        st.image(HEAD_ICON, use_column_width="always")
+    with col2:
+        header = "NVIDIA-LC Conversational RAG Chatbot"
+        st.write(f"<h3 class='main-header'>{header}</h3>", unsafe_allow_html=True)
+    with col3:
+        clear = st.button("Clear Chat")
+
+    return clear
+
+clear = write_top_bar()
+
+# Section 2 : Select different foundational models
+st.markdown("---")
+llm_select_model = st.radio(
+    "Select the Foundational Model: \n\n",
+    ["Llama3-8b", "Mixtral-8x7b", "Gemma-7b"],
+    key="llm_select_model",
+    horizontal=True,
+)
+
+if llm_select_model == "Llama3-8b":
+    model = 'meta/llama3-8b-instruct'
+elif llm_select_model == "Mixtral-8x7b":
+    model = 'mistralai/mixtral-8x7b-instruct-v0.1'
+else:
+    model = 'google/gemma-7b'
+
+print(f"In Section 2, with selected LLM model : \"{model}\".")
+
+# Section 3 : Initializations
 if "user_id" in st.session_state:
     user_id = st.session_state["user_id"]
 else:
@@ -32,9 +65,6 @@ if "llm_chain" not in st.session_state:
         # Create an instance of the Vectorstore class with the given data sources
         vectorstore = nvidia_lc.Vectorstore(nvidia_lc.raw_documents)
 
-    # Create an instance of the Chatbot class
-    chatbot = nvidia_lc.Chatbot()
-
     # datetime object containing current date and time
     now = datetime.now()
 
@@ -43,7 +73,11 @@ if "llm_chain" not in st.session_state:
     print("Current date and time =", dt_string)
 
     st.session_state["llm_app"] = nvidia_lc
-    st.session_state["llm_chain"] = chatbot
+else:
+    print(f"In Section 3, llm_chain exists with model \"{model}\".")
+
+if "prev_model" not in st.session_state:
+    st.session_state.prev_model = ""
 
 if "questions" not in st.session_state:
     st.session_state.questions = []
@@ -54,22 +88,7 @@ if "answers" not in st.session_state:
 if "input" not in st.session_state:
     st.session_state.input = ""
 
-# Section 2 : Write Main Header
-def write_top_bar():
-    col1, col2, col3 = st.columns([2, 10, 2.3])
-    with col1:
-        st.image(HEAD_ICON, use_column_width="always")
-    with col2:
-        header = "NVIDIA-LC Conversational RAG Chatbot"
-        st.write(f"<h3 class='main-header'>{header}</h3>", unsafe_allow_html=True)
-    with col3:
-        clear = st.button("Clear Chat")
-
-    return clear
-
-clear = write_top_bar()
-
-if clear:
+if clear and "llm_chain" in st.session_state:
     st.session_state.questions = []
     st.session_state.answers = []
     st.session_state.input = ""
@@ -77,15 +96,25 @@ if clear:
     # Clear LLMChain Conversation Buffer Memory 
     st.session_state.llm_chain.clear_mem_chat_history(st.session_state["llm_chain"])
 
-# Section 3 : Handling input from the user.
+# Section 4 : Handling input from the user.
 def handle_input():
     input = st.session_state.input
+
+    if st.session_state.prev_model != model:
+        # Lazy instantiation : create an instance of the Chatbot class
+        print(f"Create an instance of the Chatbot class with model : \"{model}\".")
+        chatbot = nvidia_lc.Chatbot(model=model)
+        st.session_state["llm_chain"] = chatbot
+        st.session_state.prev_model = model
 
     # Handle User Query
     llm_chain = st.session_state["llm_chain"]
     llm_app = st.session_state["llm_app"]
 
-    llm_response = llm_chain.run_RAG(message=input)
+    # Include spinner to display a message while waiting for LLM response
+    with st.spinner(f"Generating LLM response using model, \"{model}\" ..."):
+        llm_response = llm_chain.run_RAG(message=input)
+
     if llm_response is not None:
         print("\nLLM Response for question :", llm_response)
     else:
@@ -94,7 +123,10 @@ def handle_input():
 
     # Handle the case for general questions that cannot be answered by RAG model with NVIDIA NeMo GuardRails
     if "do not have" in llm_response or "don\'t have" in llm_response or "do not know" in llm_response or "don\'t know" in llm_response :
-        llm_response = llm_chain.run_GenModel(message=input)
+
+        # Include spinner to display a message while waiting for LLM response
+        with st.spinner(f"Generating LLM response with run_GenModel using model, \"{model}\" ..."):
+            llm_response = llm_chain.run_GenModel(message=input)
 
         if llm_response is not None:
             print("\nLLM Response for general question :", llm_response)
@@ -103,7 +135,6 @@ def handle_input():
             # return
 
     # Change thumbUp based on user input in the future
-    model = 'meta/llama3-8b-instruct'
     llm_chain.write_qa_to_json(modelId = model,
                                question = input,
                                answer = llm_response,
@@ -125,7 +156,7 @@ def handle_input():
     print("st.session_state.answers :", st.session_state.answers)
     print()
 
-# Section 4 :
+# Section 5 :
 def write_user_message(md):
     col1, col2 = st.columns([1, 12])
 
@@ -140,8 +171,6 @@ def render_answer(answer):
     with col1:
         st.image(AI_ICON, use_column_width="always")
     with col2:
-        # print("answer_response :", answer["response"])
-        # st.info(answer["response"])
         st.info(answer)
 
 def write_chat_message(md):
