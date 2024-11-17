@@ -6,8 +6,8 @@ import bedrock
 from datetime import datetime
 
 # Configure session state
-HEAD_ICON = "images/RAG_bot_86x78.png"
-# HEAD_ICON = "images/aws-lol.png"
+# HEAD_ICON = "images/RAG_bot_86x78.png"
+HEAD_ICON = "images/aws-lol.png"
 USER_ICON = "images/user-icon.png"
 AI_ICON = "images/ai-icon.png"
 

@@ -17,17 +17,17 @@ from langchain.chains import LLMChain
 # Documents that are to be embedded and store in Vector Database
 raw_documents = [
     {
-        "title": "Text Embeddings",
-        "url": "https://docs.cohere.com/docs/text-embeddings"},
+        "title" : "Introduction to Embeddings at Cohere",
+        "url"   : "https://docs.cohere.com/docs/embeddings"},
     {
-        "title": "Similarity Between Words and Sentences",
-        "url": "https://docs.cohere.com/docs/similarity-between-words-and-sentences"},
+        "title" : "Chunking Strategies",
+        "url"   : "https://docs.cohere.com/v2/page/chunking-strategies"},
     {
-        "title": "The Attention Mechanism",
-        "url": "https://docs.cohere.com/docs/the-attention-mechanism"},
+        "title" : "Train and deploy a fine-tuned model",
+        "url"   : "https://docs.cohere.com/v2/docs/classify-starting-the-training"},
     {
-        "title": "Transformer Models",
-        "url": "https://docs.cohere.com/docs/transformer-models"}
+        "title" : "Introduction to Large Language Models",
+        "url"   : "https://docs.cohere.com/v2/docs/introduction-to-large-language-models"}
 ]
 
 class Vectorstore:
@@ -205,7 +205,7 @@ class Chatbot:
                 "k": 250,
                 "max_tokens": 1000,
             
-                "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
+                "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
                              You should say you do not know if you do not know and answer only if \
                              you are very confident. Organise the answers in a nice number bulleted format.", 
                 # "chat_history" is not used for "search_queries_only" with empty []
@@ -234,7 +234,7 @@ class Chatbot:
                     "k": 250,
                     "max_tokens": 1000,
                 
-                    "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
+                    "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
                                  You should say you do not know if you do not know and answer only if \
                                  you are very confident. Organise the answers in a nice number bulleted format.", 
                     
@@ -254,9 +254,9 @@ class Chatbot:
                     "k": 250,
                     "max_tokens": 1000,
                 
-                    "preamble": "You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is in Transformers and Attention models. \
+                    "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
                                  You should say you do not know if you do not know and answer only if \
-                                 you are very confident. Organise the answers in a nice number bulleted format. Answer in a happy and cheerful tone.", 
+                                 you are very confident. Organise the answers in a nice number bulleted format.", 
                     
                     "chat_history": self.prev_docs_chat_history_response,
                     "message": message,
@@ -301,9 +301,9 @@ class Chatbot:
                                                  },
                             )
 
-        prompt_template = """You are BC, an AI assistant model 2701 and you are created by SAM. Your expertise is tourism in ASEAN region and premium vacation planning.
+        prompt_template = """You are an AI assistant model 0910 and created by RLA. Your expertise is Large Language Models.
                              You should say you do not know if you do not know and answer only if you are very confident.
-                             Organise the answers in a nice number bulleted format. Answer in a happy and cheerful tone.
+                             Organise the answers in a nice number bulleted format. Answer in a Machine Learning professional tone.
 
                              Previous conversation:
                              {chat_history}
