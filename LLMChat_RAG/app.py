@@ -137,5 +137,5 @@ with st.container():
 
 st.markdown("---")
 input = st.text_input(
-    "Hi, I am BC, your AI Assistant with knowledge in Transformer models and Attention mechanism. Please ask any question.", key="input", on_change=handle_input
+    "Hi, I am your AI Assistant with knowledge in Large Language Models. Please ask any question.", key="input", on_change=handle_input
 )
