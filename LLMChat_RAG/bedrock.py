@@ -17,17 +17,17 @@ from langchain.chains import LLMChain
 # Documents that are to be embedded and store in Vector Database
 raw_documents = [
     {
-        "title" : "Introduction to Embeddings at Cohere",
-        "url"   : "https://docs.cohere.com/docs/embeddings"},
+        "title" : "Crafting Effective Prompts",
+        "url"   : "https://docs.cohere.com/docs/crafting-effective-prompts"},
     {
-        "title" : "Chunking Strategies",
-        "url"   : "https://docs.cohere.com/v2/page/chunking-strategies"},
+        "title" : "Advanced Prompt Engineering Techniques",
+        "url"   : "https://docs.cohere.com/docs/advanced-prompt-engineering-techniques"},
     {
-        "title" : "Train and deploy a fine-tuned model",
-        "url"   : "https://docs.cohere.com/v2/docs/classify-starting-the-training"},
+        "title" : "Prompt Truncation",
+        "url"   : "https://docs.cohere.com/docs/prompt-truncation"},
     {
-        "title" : "Introduction to Large Language Models",
-        "url"   : "https://docs.cohere.com/v2/docs/introduction-to-large-language-models"}
+        "title" : "System Messages - Preambles",
+        "url"   : "https://docs.cohere.com/docs/preambles"}
 ]
 
 class Vectorstore:
@@ -64,10 +64,10 @@ class Vectorstore:
         self.contentType = 'application/json'
         self.accept = '*/*'
         
+        # Load and chunk data, embed document chunks and index the document chunks for efficient retrieval
         self.load_and_chunk()
         self.embed()
         self.index()
-
 
     def load_and_chunk(self) -> None:
         """
@@ -187,101 +187,200 @@ class Chatbot:
         # Save the RAG chat history
         self.prev_docs_chat_history_response = []
 
+        # Save the citations and cited_documents
+        self.citations = []
+        self.cited_documents = []
 
-    def run_RAG(self, message):
+
+    # Coded should be placed in bedrock.py after streaming works
+    # Implement for Guardrails to overcome "TypeError: Object of type HumanMessage is not JSON serializable" with rag_chain
+    def role_message(self, role: str, message: str):
+        # This key pairing is specific to different FM model, "role" and "message" keys are tested for "cohere.command-r-plus-v1:0"
+        return {"role": role, "message": message}
+
+    def add_chat_history(self, chat_history, question, question_response):
+        dict_role_message = self.role_message("USER", question)  # Human
+        chat_history.append(dict_role_message)
+
+        # Might need to manoeurve with guardrail response compare code from Nvidia_llc
+        # question_response = rag_guardrails_response["output"] or question_response = rag_guardrails_response["answer"]
+
+        dict_role_message = self.role_message("CHATBOT", question_response)  # AI
+        chat_history.append(dict_role_message)
+
+        return question_response
+
+    # Obtain LLM response
+    def get_LLM_response(self, message, chat_history):
         """
-        Runs the chatbot application.
+        Runs the streaming chatbot application.
 
         """
-        
+
+        # Initialise internal variables
+        modelId = "cohere.command-r-plus-v1:0"
         contentType = "application/json"
         accept = "*/*"
 
+        # Reset previous citations and cited_documents if present before getting new LLM responses
+        self.citations = []
+        self.cited_documents = []
+        # citation_cnt = 1
+        # document_cnt = 1
+
+        print("Chat history :\n", chat_history)
+        self.conversation_id = str(uuid.uuid4())
+
         # Generate search queries (if any) from user query
-        modelId = "cohere.command-r-v1:0"            
         cohere_body = json.dumps({
-                "temperature": 0.0,
-                "p": 0.99,
-                "k": 250,
-                "max_tokens": 1000,
-            
-                "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
-                             You should say you do not know if you do not know and answer only if \
-                             you are very confident. Organise the answers in a nice number bulleted format.", 
-                # "chat_history" is not used for "search_queries_only" with empty []
-                "message": message,
-                "search_queries_only": True,
-        })
+                                  "temperature": 0.0,
+                                  "p": 0.99,
+                                  "k": 250,
+                                  "max_tokens": 1000,
+   
+                                  # "preamble" not needed for seach queries
+                                  # "chat_history": chat_history is not used for "search_queries_only" with empty []
+                                  "message": message,
+                                  "search_queries_only": True, # is used only to search for embeddings matching the user query with no output
+                                 })
+
         response = self.bedrock_runtime.invoke_model(body=cohere_body, modelId=modelId,
                                                      accept=accept, contentType=contentType)
+ 
+        # Use only for "invoke_model", non-streaming for searching the relevant documents based on the user query
         search_response_body = json.loads(response.get('body').read())
 
-        # Use Cohere Command R+ for continuous chat after query search
-        modelId = "cohere.command-r-plus-v1:0"
         # If there are search queries, retrieve document chunks and respond
         if search_response_body["search_queries"]:
-            print("Retrieving information...\n", end="")
+            print()
+            print("Search queries are present will be used to retrieve top_k documents...\n", end="")
 
-            # Retrieve document chunks for each query
+            # Retrieve document chunks for each search query
             documents = []
             for query in search_response_body["search_queries"]:
-                documents.extend(self.vectorstore.retrieve(query["text"]))
+                doc_chunk = self.vectorstore.retrieve(query["text"])
+                print(f"Query from search_queries :\n{query}\n with document chunk information :\n{doc_chunk}")
+                print()
+
+                # append documents with the retrieved document chunks
+                documents.extend(doc_chunk)
+
+            # Retrieve information from Amazon Knowledge Base OpenSearch Serveless collections
+            # documents = self.vectorstore.retrieve(query)
+            # print(f"Query : {query} with no. of retrieved documents : {len(documents)}")
+            # for query in search_response_body["search_queries"]:
+            #     documents.extend(self.vectorstore.retrieve(query["text"]))
+
+            print(f"Query : {message} with no. of retrieved documents : {len(documents)}")
+            print(f"Retrieved document chunks to be used as context for LLM :\n{documents}")
+            print()
 
             # Use document chunks to respond
             cohere_body = json.dumps({
-                    "temperature": 0.0,
-                    "p": 0.99,
-                    "k": 250,
-                    "max_tokens": 1000,
-                
-                    "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
-                                 You should say you do not know if you do not know and answer only if \
-                                 you are very confident. Organise the answers in a nice number bulleted format.", 
-                    
-                    "chat_history": self.prev_docs_chat_history_response,
-                    "message": message,
-                    "documents": documents,
-            })
-            response = self.bedrock_runtime.invoke_model(body=cohere_body, modelId=modelId,
-                                                         accept=accept, contentType=contentType)
-            docs_response_body = json.loads(response.get('body').read())
+                                      "temperature": 0.0,
+                                      "p": 0.99,
+                                      "k": 250,
+                                      "max_tokens": 1000,
+    
+                                      "preamble": "You are an AI assistant with expertise in Large Language Models provided by Cohere. \
+                                                   Answer the question considering the history of the conversations. \
+                                                   You should say you do not know if you do not know and answer only if \
+                                                   you are very confident. Organise the answers in a nice number bulleted format.",
+                                      "chat_history": chat_history,
+                                      "message": message,
+                                      "documents": documents # used as context from the search_queries for LLM
+                                     })
 
-        # If there is no search query, directly respond
+            # Include Amazon Bedrock Guardrails
+            streaming_response = self.bedrock_runtime.invoke_model_with_response_stream(body=cohere_body, modelId=modelId,
+                                                                                        accept=accept, contentType=contentType,
+                                                                                        # guardrailIdentifier = '1ozptvv2saiw',
+                                                                                        # guardrailVersion ="1", 
+                                                                                        # trace = "ENABLED"
+                                                                                        )
+
+            # For streaming, change "invoke_model" to "invoke_model_with_response_stream"
+            # For non-streaming with "invoke_model" only
+            # Print the chatbot response and chat_history with docs_response_body['chat_history']
+            # docs_response_text = docs_response_body.get('text')
+
+            # chat_history are saved in each invoke model with "chat_history" from previous queries
+            # message_response = add_chat_history(chat_history, message, docs_response_text)
+
+        # If there is no search queries result, directly respond without "documents"
         else:
+            print("\n** Call LLM without additional context from RAG **")
             cohere_body = json.dumps({
-                    "temperature": 0.0,
-                    "p": 0.99,
-                    "k": 250,
-                    "max_tokens": 1000,
-                
-                    "preamble": "You are an AI assistant model 0910 and created by RLA. Your expertise is in Large Language Models. \
-                                 You should say you do not know if you do not know and answer only if \
-                                 you are very confident. Organise the answers in a nice number bulleted format.", 
-                    
-                    "chat_history": self.prev_docs_chat_history_response,
-                    "message": message,
-            })
-            response = self.bedrock_runtime.invoke_model(body=cohere_body, modelId=modelId,
-                                                         accept=accept, contentType=contentType)
-            docs_response_body = json.loads(response.get('body').read())
+                                      "temperature": 0.0,
+                                      "p": 0.99,
+                                      "k": 250,
+                                      "max_tokens": 1000,
+    
+                                      "preamble": "You are an AI assistant with expertise in Large Language Models provided by Cohere. \
+                                                   Answer the question considering the history of the conversations. \
+                                                   You should say you do not know if you do not know and answer only if \
+                                                   you are very confident. Organise the answers in a nice number bulleted format.",
+                                      "chat_history": chat_history,
+                                      "message": message,
+                                     })
 
-        # Print the chatbot response, citations, and documents
-        docs_response_text = docs_response_body.get('text')
-        print("User:\n", message)
-        print("Chatbot:\n", docs_response_text)
-        citations = []
-        cited_documents = []
-                
-        self.conversation_id = str(uuid.uuid4())
-        
-        print("\nConversationID : {} with prev chat history :\n{}".format(self.conversation_id, self.prev_docs_chat_history_response))
-        docs_chat_history_response = docs_response_body.get('chat_history')
+            # Include Amazon Bedrock Guardrails
+            streaming_response = self.bedrock_runtime.invoke_model_with_response_stream(body=cohere_body, modelId=modelId,
+                                                                                        accept=accept, contentType=contentType,
+                                                                                        # guardrailIdentifier = '1ozptvv2saiw',
+                                                                                        # guardrailVersion ="1", 
+                                                                                        # trace = "ENABLED"
+                                                                                        )
 
-        # chat_history are saved in each invoke model with "chat_history" from previous queries
-        self.prev_docs_chat_history_response = docs_chat_history_response
-        print("\nConversationID : {} with chat history :\n{}".format(self.conversation_id, docs_chat_history_response))
+        # Same processing whether there are "search_queries"
+        # Process streaming response by returning chunks to streamlit application
+        for event in streaming_response["body"]:
+            chunk = json.loads(event["chunk"]["bytes"])
+            # print("chunk :", chunk)
+            if chunk["event_type"] == "text-generation":
+                yield chunk["text"] or ""
+            elif chunk["event_type"] == "stream-end":
+                # End of streaming response
+                llm_stream_end_response = chunk['response']['text']
+                print()
+                print("Chatbot stream-end response :\n", llm_stream_end_response)
+
+                # Store the citations and cited_documents
+                if 'citations' in chunk['response'] and 'documents' in chunk['response'] :
+                    self.citations = chunk['response']['citations']
+                    self.cited_documents = chunk['response']['documents']
+                else:
+                    print(100*"=")
+                    print("Chunk response :\n", chunk['response'])
+                    print(100*"=")
+
+                # docs_chat_history_response = chunk['response']['chat_history']
+
+                print()
+                print("ConversationID : {} with prev chat history :\n{}".format(self.conversation_id, chat_history))
+                # Update "chat_history" with complete response
+                message_response = self.add_chat_history(chat_history, message, llm_stream_end_response)
+                print()
+                print("Message response :\n", message_response)
+                print()
+                # Display the citations and source documents
+                # if self.citations:
+                #    print("\n\nCITATIONS:")
+                #    for citation in self.citations:
+                #        print("[{}] {}".format(citation_cnt, citation))
+                #        citation_cnt += 1
+
+                # if self.cited_documents:
+                #     print("\nDOCUMENTS:")
+                #     for document in self.cited_documents:
+                #         print("[{}] {}".format(document_cnt, document))
+                #         document_cnt += 1
+
+                print()
+                print("ConversationID : {} with updated chat history :\n{}".format(self.conversation_id, chat_history))
         
-        return docs_response_text, docs_chat_history_response
+                # Return newline
+                return "\n"
 
     def run_GenModel(self, message):
         modelId = 'anthropic.claude-3-sonnet-20240229-v1:0'
@@ -397,4 +496,4 @@ if __name__ == "__main__":
         gen_llm_response, memory_chat_history = chatbot.run_GenModel(message)
         print("\nLoad conversation memory :\n", memory_chat_history.load_memory_variables({}))
 
-#End of Program
+# End of Program
