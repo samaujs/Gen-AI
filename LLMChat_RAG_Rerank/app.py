@@ -21,9 +21,11 @@ AI_ICON = "images/ai-icon.png"
 st.set_page_config(page_title="Enterprise Chatbot", page_icon=HEAD_ICON)
 
 # Application variables
-cohere_model_title = "Cohere R+ (In-Memory)"
-claude_model_title = "Claude 3.5 Sonnet (KB+Rerank)"
-nova_model_title = "Nova Pro (KB+Context)"
+cohere_model_native_title = "Cohere R+ (Hnswlib)"
+claude_model_native_title = "Claude 3.5 Sonnet (native)"
+claude_model_title = "Claude 3.5 Sonnet (KB+GR+Rerank)"
+nova_model_title = "Nova Pro (latency)"
+
 prev_docs_chat_history = []
 
 # Section 1 : Write Main Header
@@ -45,17 +47,19 @@ clear = write_top_bar()
 st.divider()
 llm_select_model = st.radio(
     "Select the Foundational Model: \n\n",
-    [cohere_model_title, claude_model_title, nova_model_title],
+    [claude_model_native_title, claude_model_title, nova_model_title],
     key="llm_select_model",
     horizontal=True,
 )
 
-if llm_select_model == cohere_model_title:
-    modelId = 'cohere.command-r-plus-v1:0'
+if llm_select_model == claude_model_native_title:
+    modelId = 'anthropic.claude-3-5-sonnet-20240620-v1:0'
 elif llm_select_model == claude_model_title:
     modelId = 'anthropic.claude-3-5-sonnet-20240620-v1:0'
-else:
+elif llm_select_model == nova_model_title:
     modelId = 'us.amazon.nova-pro-v1:0'
+else:
+    modelId = 'cohere.command-r-plus-v1:0'
 
 print(f"In Section 2, with selected LLM modelID : \"{modelId}\".")
 
@@ -108,7 +112,7 @@ if clear:
     st.session_state.chat_history = []
 
     # Reset radio button
-    # del st.session_state.llm_select_model # cohere_model_title
+    # del st.session_state.llm_select_model # claude_model_native_title
 
 # Section 4 : Handling input from the user.
 def handle_input():
@@ -199,42 +203,37 @@ print(100*"=")
 
 for message in st.session_state.chat_history:
     # Cohere model with "invoke_model_with_response_stream" API
-    if message['role'] == 'USER':
-        print("Query : {}".format(message['message']))
-        print()
-        with st.chat_message("Human", avatar=USER_ICON):
-            st.markdown(message['message'])
-    elif message['role'] == 'CHATBOT':
-        print("LLM response : {}".format(message['message']))
-        print(100*"-")
-        with st.chat_message("AI", avatar=AI_ICON):
-            st.markdown(message['message'])
-
-    # Claude model with "retrieve_and_generate_stream"
-    if llm_select_model == claude_model_title:
-        if message['role'] == 'user':
+    if llm_select_model == cohere_model_native_title:  # nova_model_title
+        # Cohere model with "invoke_model_with_response_stream" API
+        if message['role'] == 'USER':
             print("Query : {}".format(message['message']))
             print()
             with st.chat_message("Human", avatar=USER_ICON):
                 st.markdown(message['message'])
-        elif message['role'] == 'assistant':
+        elif message['role'] == 'CHATBOT':
             print("LLM response : {}".format(message['message']))
             print(100*"-")
             with st.chat_message("AI", avatar=AI_ICON):
                 st.markdown(message['message'])
 
-    # Nova model with "converse_stream" API
-    elif llm_select_model == nova_model_title:
+    # For Claude model with "retrieve_and_generate_stream" or "invoke_model_with_response_stream" API
+    # claude_model_native_title, claude_model_title
+    else:
         if message['role'] == 'user':
-            print("Query : {}".format(message['content'][0]['text']))
+            # For Nova model with "converse_stream" API
+            # message['content'][0]['text']
+            print("Query : {}".format(message['content']))
             print()
             with st.chat_message("Human", avatar=USER_ICON):
-                st.markdown(message['content'][0]['text'])
+                # st.markdown(message['content'][0]['text'])
+                st.markdown(message['content'])
         elif message['role'] == 'assistant':
-            print("LLM response : {}".format(message['content'][0]['text']))
+            # message['content'][0]['text'] for converse api
+            print("LLM response : {}".format(message['content']))
             print(100*"-")
             with st.chat_message("AI", avatar=AI_ICON):
-                st.markdown(message['content'][0]['text'])
+                # st.markdown(message['content'][0]['text'])
+                st.markdown(message['content'])
 
 # Obtain user query
 user_query = st.chat_input("Hi, I am your AI Assistant with knowledge in Amazon Bedrock. Please ask your question.")
@@ -257,28 +256,14 @@ if user_query is not None and user_query != "":
         print("st.session_state.chat_history :\n", prev_docs_chat_history)
 
         # Perform streaming and extracted information based on the foundational model
-        if llm_select_model == cohere_model_title:
+        if llm_select_model == claude_model_native_title:
             print(f"\n** Selected model title : {llm_select_model} **")
 
             # For handling streaming response
-            streaming_response = st.write_stream(llm_chain.run_Cohere_Model(user_query, prev_docs_chat_history))
+            streaming_response = st.write_stream(llm_chain.run_Claude_Model_native(modelId, user_query, prev_docs_chat_history))
             print()
-            print("Application complete streaming_response from Cohere model :\n", streaming_response)
+            print("Application complete streaming_response from Claude model (** no RAG **) :\n", streaming_response)
             print()
-
-            # Display token usage if present
-            print(f"** Input tokens in app : {llm_chain.inputTokenCount} **")
-            print(f"** Output tokens in app : {llm_chain.outputTokenCount} **")
-            print(f"** Invocation Latency in app : {llm_chain.latency} **")
-            print()
-            if llm_chain.inputTokenCount > 0 and llm_chain.outputTokenCount > 0:
-                st.write(f"** Usage Metrics - Input Tokens : {llm_chain.inputTokenCount}, \
-                                              Output Tokens : {llm_chain.outputTokenCount} and \
-                                              Invocation Latency : {llm_chain.latency} **")
-           
-            # For clearer display as separator (not blocked by guardrail)
-            if prev_docs_chat_history[-1]['message'] != "Sorry, I am unable to assist you with this request.":
-                st.write("** REFERENCES : **")
 
             print("-- If any citations after completion of streaming_response --")
             # Display the citations and source documents
@@ -308,6 +293,18 @@ if user_query is not None and user_query != "":
                     mention(label=f"[{document_cnt}] {document['title']} :: 👉 \"{document['text']}\"", url=document['url'])
                     document_cnt += 1
 
+            # Display token usage if present
+            print()
+            print(f"** Input tokens in app : {llm_chain.inputTokenCount} **")
+            print(f"** Output tokens in app : {llm_chain.outputTokenCount} **")
+            print(f"** Invocation Latency in app : {llm_chain.latency} **")
+            print()
+
+            if llm_chain.inputTokenCount > 0 and llm_chain.outputTokenCount > 0:
+                st.write(f"** Usage Metrics - Input Tokens : {llm_chain.inputTokenCount}, \
+                                              Output Tokens : {llm_chain.outputTokenCount} and \
+                                              Invocation Latency : {llm_chain.latency} **")
+           
         elif llm_select_model == claude_model_title:
             print(f"\n** Selected model title : {llm_select_model} **")
 
@@ -317,8 +314,8 @@ if user_query is not None and user_query != "":
             print("Application complete streaming_response from Claude model :\n", streaming_response)
             print()
 
-            # For clearer display as separator (not blocked by guardrail)
-            if prev_docs_chat_history[-1]['message'] != "Sorry, I am unable to assist you with this request.":
+            # For clearer display as separator (not blocked by guardrail) using "retrieve_and_generate_stream"
+            if prev_docs_chat_history[-1]['content'] != "Sorry, I am unable to assist you with this request.":
                 st.write("** REFERENCES : **")
 
             print("-- If any citations after completion of streaming_response --")
@@ -354,24 +351,79 @@ if user_query is not None and user_query != "":
                                      url=document['x-amz-bedrock-kb-source-uri'])
                     document_cnt += 1
 
+            # Display token usage if present using "converse_stream"
+            print()
+            print(f"** Est. Input tokens in app : {llm_chain.inputTokenCount} **")
+            print(f"** Est. Output tokens in app : {llm_chain.outputTokenCount} **")
+            print(f"** Est. Latency (Ms) in app : {llm_chain.latency} **")
+            print()
+
+            # "retrieve_and_generate" does not return usage metrics, so compute respective estimates
+            if llm_chain.inputTokenCount > 0 and llm_chain.outputTokenCount > 0:
+                st.write(f"** Usage Metrics - Est. Input Tokens : {llm_chain.inputTokenCount}, \
+                                              Est. Output Tokens : {llm_chain.outputTokenCount} and \
+                                              Est. Latency (Ms) : {llm_chain.latency} **")
+           
         elif llm_select_model == nova_model_title:
             print(f"\n** Selected model title : {llm_select_model} **")
 
             # For handling streaming response
-            streaming_response = st.write_stream(llm_chain.run_Nova_Model(modelId, user_query, prev_docs_chat_history))
+            # streaming_response = st.write_stream(llm_chain.run_Nova_Model(modelId, user_query, prev_docs_chat_history))
+            # Call run_Claude_Model with Nova Pro modelId
+            streaming_response = st.write_stream(llm_chain.run_Claude_Model(modelId, user_query, prev_docs_chat_history))
             print()
             print("Application complete streaming_response from Nova model :\n", streaming_response)
             print()
 
-            # Display token usage if present
-            print(f"** Input tokens in app : {llm_chain.inputTokenCount} **")
-            print(f"** Output tokens in app : {llm_chain.outputTokenCount} **")
-            print(f"** Latency (Ms) in app : {llm_chain.latency} **")
+            # For clearer display as separator (not blocked by guardrail) using "retrieve_and_generate_stream"
+            if prev_docs_chat_history[-1]['content'] != "Sorry, I am unable to assist you with this request.":
+                st.write("** REFERENCES : **")
+
+            print("-- If any citations after completion of streaming_response --")
+            # Display the citations and source documents
+            if llm_chain.citations:
+                citation_cnt = 1
+                print("CITATIONS:")
+                for citation in llm_chain.citations:
+                    print("[{}] {}".format(citation_cnt, citation))
+                    citation_cnt += 1
             print()
+            print("-- If any documents after completion of streaming_response --")
+            if llm_chain.cited_documents:
+                doc_refs_text = []
+                doc_refs = []
+                document_cnt = 1
+
+                # Store only the non-duplicated text with the information for first occurrence
+                for i in range(len(llm_chain.cited_documents)):
+                    if llm_chain.citations[i] not in doc_refs_text:
+                        doc_refs_text.append(llm_chain.citations[i])
+                        doc_refs.append({'text': llm_chain.citations[i],
+                                         'x-amz-bedrock-kb-source-uri' : llm_chain.cited_documents[i]})
+
+                print("\nREFERENCES :")
+                for document in doc_refs:
+                    print(f"[{document_cnt}] {document}")
+
+                    # Extract filename from URI path
+                    ref_str = document['x-amz-bedrock-kb-source-uri']
+                    ref_filename = ref_str.split("/")[-1]
+                    mention(label=f"[{document_cnt}] {ref_filename} :: 👉 \"{document['text']}\"",
+                                     url=document['x-amz-bedrock-kb-source-uri'])
+                    document_cnt += 1
+
+            # Display token usage if present using "converse_stream"
+            print()
+            print(f"** Est. Input tokens in app : {llm_chain.inputTokenCount} **")
+            print(f"** Est. Output tokens in app : {llm_chain.outputTokenCount} **")
+            print(f"** Est. Latency (Ms) in app : {llm_chain.latency} **")
+            print()
+
+            # "retrieve_and_generate" does not return usage metrics, so compute respective estimates
             if llm_chain.inputTokenCount > 0 and llm_chain.outputTokenCount > 0:
-                st.write(f"** Usage Metrics - Input Tokens : {llm_chain.inputTokenCount}, \
-                                              Output Tokens : {llm_chain.outputTokenCount} and \
-                                              Latency (Ms) : {llm_chain.latency} **")
+                st.write(f"** Usage Metrics - Est. Input Tokens : {llm_chain.inputTokenCount}, \
+                                              Est. Output Tokens : {llm_chain.outputTokenCount} and \
+                                              Est. Latency (Ms) : {llm_chain.latency} **")
            
            
         print()

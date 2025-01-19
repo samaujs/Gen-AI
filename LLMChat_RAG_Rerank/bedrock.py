@@ -7,6 +7,7 @@ from unstructured.partition.html import partition_html
 from unstructured.chunking.title import chunk_by_title
 
 import datetime
+import time
 
 # LangChain with ConversationBufferMemory
 from langchain_aws import ChatBedrock
@@ -46,6 +47,11 @@ raw_documents = [
 kbId = "7GX5TQSHLF"
 guardrailId = 'i9w2hrcadw31'
 numberOfResults = 20
+
+# Prompt templates
+system_prompt = "You are an AI assistant with expertise in Amazon Web Services.\
+                 You should say you do not know if you do not know and answer only if you are very confident.\
+                 Provide concise answer in numbered format and highlight api calls."
 
 class Vectorstore:
     """
@@ -214,26 +220,28 @@ class Chatbot:
         # Save sessionId for multi-turn conversation in "retrieve_and_generate_stream"
         self.prev_sessionId = ''
 
-        # Save "invocationMetrics" for Cohere model
+        # Save "invocationMetrics" when using "invoke_model_with_response_stream" or "retrieve_and_generate_stream"
+        # Need to compute the usage metrics when using "retrieve_and_generate_stream"
         self.inputTokenCount = 0
         self.outputTokenCount = 0
+        self.est_totalTokenCount = 0
         self.latency = 0
 
     # Implement for Guardrails to overcome "TypeError: Object of type HumanMessage is not JSON serializable" with rag_chain
-    def role_message(self, role: str, message: str):
+    def cohere_user_role_message(self, role: str, message: str):
         # This key pairing is specific to different FM model, "role" and "message" keys are tested for "cohere.command-r-plus-v1:0"
         return {"role": role, "message": message}
 
-    def add_chat_history(self, chat_history, role_user, question, role_ai, question_response):
+    def add_cohere_chat_history(self, chat_history, role_user, question, role_ai, question_response):
         # role : USER (Cohere), user (Claude), Human (LangChain)
-        dict_role_message = self.role_message(role_user, question)
+        dict_role_message = self.cohere_user_role_message(role_user, question)
         chat_history.append(dict_role_message)
 
         # Might need to manoeurve with guardrail response compare code from Nvidia_llc
         # question_response = rag_guardrails_response["output"] or question_response = rag_guardrails_response["answer"]
 
         # role : CHATBOT (Cohere), assistant (Claude), AI (LangChain)
-        dict_role_message = self.role_message(role_ai, question_response)
+        dict_role_message = self.cohere_user_role_message(role_ai, question_response)
         chat_history.append(dict_role_message)
 
         return question_response
@@ -247,6 +255,45 @@ class Chatbot:
         dict_role_message = self.converse_user_role_message(role_user, message)
         chat_history.append(dict_role_message)
         # return chat_history is not necessary
+
+    def claude_user_role_message(self, role: str, message: str):
+        # This key pairing is specific to Claude model with converse, "role" and "content" keys are tested for "us.amazon.nova-pro-v1:0"
+        # [{"role": "user", "content": "What shares should I buy?"}]
+        return {"role": role, 'content': message}
+
+    def add_claude_query(self, chat_history, role_user, message):
+        dict_role_message = self.claude_user_role_message(role_user, message)
+        chat_history.append(dict_role_message)
+        # return chat_history is not necessary
+
+    def add_claude_chat_history(self, chat_history, role_user, question, role_ai, question_response):
+        # {"role": "user", "content": "Hello there."}
+        dict_role_message = self.claude_user_role_message(role_user, question)
+        chat_history.append(dict_role_message)
+
+        # {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"}
+        dict_role_message = self.claude_user_role_message(role_ai, question_response)
+        chat_history.append(dict_role_message)
+
+        return question_response
+
+    def compute_token_usage(self, est_total_input_tokens, message, llm_response):
+        chars_per_input_token = 2.5
+        chars_per_output_token = 3.9
+    
+        # Estimate Input Tokens
+        no_of_input_chars = len(message)
+        est_inputTokenCount = est_total_input_tokens + int(no_of_input_chars/chars_per_input_token)
+
+        # Estimate Output Tokens
+        no_of_output_chars = len(llm_response)
+        est_outputTokenCount = int(no_of_output_chars/chars_per_output_token)
+
+        # Add previous total tokens with estimated input and output tokens
+        est_total_input_tokens = est_inputTokenCount + est_outputTokenCount
+        print(f"** Estimated total input tokens including previous total tokens : {est_total_input_tokens} **")
+
+        return est_inputTokenCount, est_outputTokenCount, est_total_input_tokens
 
     # Obtain Cohere LLM response
     def run_Cohere_Model(self, message, chat_history):
@@ -403,8 +450,8 @@ class Chatbot:
                 print()
                 print("ConversationID : {} with prev chat history :\n{}".format(self.conversation_id, chat_history))
                 # Update "chat_history" with complete response
-                message_response = self.add_chat_history(chat_history, "USER", message,
-                                                         "CHATBOT", llm_stream_end_response)
+                message_response = self.add_cohere_chat_history(chat_history, "USER", message,
+                                                                "CHATBOT", llm_stream_end_response)
                 print()
                 print("Message response :\n", message_response)
                 print()
@@ -444,8 +491,12 @@ class Chatbot:
         region = 'us-west-2'
         rerank_modelId = "cohere.rerank-v3-5:0"
 
-        # bedrock_agent_runtime_us_west = boto3.client(service_name='bedrock-agent-runtime', region_name=region)
-        model_package_arn = f"arn:aws:bedrock:{region}::foundation-model/{modelId}"
+        # Workaround for Nova model exception error with modelArn
+        if modelId == 'us.amazon.nova-pro-v1:0':
+            model_package_arn = modelId
+        elif modelId == 'anthropic.claude-3-5-sonnet-20240620-v1:0':
+            model_package_arn = f"arn:aws:bedrock:{region}::foundation-model/{modelId}"
+
         rerank_model_package_arn = f"arn:aws:bedrock:{region}::foundation-model/{rerank_modelId}"
 
         # Prompt templates
@@ -635,6 +686,9 @@ class Chatbot:
         # Reset previous citations and cited_documents if present before getting new LLM responses
         self.citations = []
         self.cited_documents = []
+        self.inputTokenCount = 0
+        self.outputTokenCount = 0
+        self.latency = 0
 
         print("Chat history :\n", chat_history)
         print()
@@ -643,6 +697,8 @@ class Chatbot:
         chunks = ""
         no_of_citations = 1
 
+        # Measure latency (ms)
+        start_time = time.time()
         if self.prev_sessionId:
             print(f"Multi-turn conversation with prev_sessionId : {self.prev_sessionId}")
             retrieve_gen_response = self.KB_Retrieve_and_Generate_Rerank_Stream(message, kbId, modelId,
@@ -654,6 +710,9 @@ class Chatbot:
                 print("There was no sessionId after being blocked from guardrail")
                 retrieve_gen_response['sessionId'] = self.prev_sessionId
             self.prev_sessionId = retrieve_gen_response['sessionId']
+
+            # For estimation when using "retrieve_and_generate", reset only for new session
+            self.est_totalTokenCount = 0
 
         print(f"User message : {message}")
         print()
@@ -695,10 +754,23 @@ class Chatbot:
         print()
         print("ConversationID : {} with prev chat history :\n{}".format(self.conversation_id, chat_history))
         # Update "chat_history" with complete response
-        message_response = self.add_chat_history(chat_history, "user", message,
-                                                 "assistant", chunks)
+        message_response = self.add_claude_chat_history(chat_history, "user", message,
+                                                        "assistant", chunks)
         print()
         print("Message response :\n", message_response)
+
+        # Compute estimated usage metrics
+        print()
+        print("Compute Usage Metrics :")
+        self.inputTokenCount, self.outputTokenCount, self.est_totalTokenCount = self.compute_token_usage(self.est_totalTokenCount,
+                                                                                                         message, message_response)
+
+        self.latency = int((time.time() - start_time)*1000)
+
+        print(f"Est. Input tokens : {self.inputTokenCount},\
+                Est. Output tokens : {self.outputTokenCount},\
+                Est. Total tokens : {self.est_totalTokenCount},\
+                Est. Latency (Ms) : {self.latency}")
 
         print()
         print("ConversationID : {} with updated chat history :\n{}".format(self.conversation_id, chat_history))
@@ -718,6 +790,89 @@ class Chatbot:
         #         document_cnt += 1
 
         # Return newline
+        return "\n"
+
+    def run_Claude_Model_native(self, modelId, message, chat_history):
+        """
+        Runs the streaming chatbot application with Claude
+
+        """
+
+        # Initialise internal variables
+
+        # Reset previous citations and cited_documents if present before getting new LLM responses
+        self.citations = []
+        self.cited_documents = []
+        self.inputTokenCount = 0
+        self.outputTokenCount = 0
+        self.latency = 0
+
+        print("Chat history :\n", chat_history)
+        print()
+        self.conversation_id = str(uuid.uuid4())
+
+        chunks = ""
+        no_of_citations = 1
+
+        # Add query in chat_history for multi-turn conversation
+        self.add_claude_query(chat_history, "user", message)
+
+        print("Multi-turn chat history should ends with a question :\n", chat_history)
+        print()
+
+        # Format the request payload using the model's native structure.
+        native_request = {
+             "anthropic_version": "bedrock-2023-05-31",
+             "max_tokens": 1000,
+             "system": system_prompt,
+             "messages": chat_history,
+             "temperature": 0.1,
+             "top_p": 0.999,
+             "top_k": 250,
+        }
+
+        # Convert the native request to JSON.
+        request = json.dumps(native_request)
+
+        # Invoke the model with the request.
+        llm_invoke_stream_response = self.bedrock_runtime.invoke_model_with_response_stream(modelId=modelId, body=request)
+
+        print(f"User message : {message}")
+        print()
+
+        # Process streaming response by returning chunks to streamlit application
+        for event in llm_invoke_stream_response["body"]:
+            chunk = json.loads(event["chunk"]["bytes"])
+            # print("chunk :", chunk)
+
+            if chunk["type"] == "content_block_delta":
+                # print(chunk['delta']['text'], end="|", flush=True)
+                chunks += chunk["delta"]["text"]
+                yield chunk["delta"]["text"] or ""
+
+        # End of streaming response
+        print()
+        print("Chatbot stream-end response :\n", chunks)
+
+        print()
+        print("ConversationID : {} with prev chat history :\n{}".format(self.conversation_id, chat_history))
+
+        # Update "chat_history" with complete response to be used for multi-turn conversation
+        self.add_claude_query(chat_history, "assistant", chunks)
+
+        print()
+        print("Message response :\n", chunks)
+
+        # Capture metrics from the last chunk
+        if 'amazon-bedrock-invocationMetrics' in chunk:
+            print(f"amazon-bedrock-invocationMetrics: \n{chunk['amazon-bedrock-invocationMetrics']}")
+            self.inputTokenCount = chunk['amazon-bedrock-invocationMetrics']['inputTokenCount']
+            self.outputTokenCount = chunk['amazon-bedrock-invocationMetrics']['outputTokenCount']
+            self.latency = chunk['amazon-bedrock-invocationMetrics']['invocationLatency']
+
+        print()
+        print("ConversationID : {} with updated chat history :\n{}".format(self.conversation_id, chat_history))
+
         return "\n"
 
     def KB_Retrieve(self, query, kbId, numberOfResults=5):
@@ -752,9 +907,9 @@ class Chatbot:
         chunks = ""
 
         # Prompt templates
-        system_prompt = "You are an AI assistant with expertise in Amazon Web Services."\
-                        "You should say you do not know if you do not know and answer only if you are very confident."\
-                        "Provide answer in number bulleted format."
+        # system_prompt = "You are an AI assistant with expertise in Amazon Web Services."\
+        #                 "You should say you do not know if you do not know and answer only if you are very confident."\
+        #                 "Provide answer in number bulleted format."
 
         # Define your system prompt for Nova
         system = [{ "text": system_prompt}]
@@ -812,7 +967,7 @@ class Chatbot:
         print("Multi-turn chat history should ends with a question :\n", chat_history)
         print()
 
-        # Include Amazon Bedrock Guardrails (streaming responses are not affected with 'async')
+        # Include Amazon Bedrock Guardrails (streaming responses are not affected with 'async', 'Prompt Attack' with in-context prompt))
         llm_converse_response = self.bedrock_runtime.converse_stream(modelId=modelId, messages=chat_history,
                                                                      system=system, inferenceConfig=inf_params,
                                                                      # guardrailConfig={
