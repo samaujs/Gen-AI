@@ -1,4 +1,4 @@
-## Fine-tune a “Bert base cased" PyTorch model with AWS Trainium / Inferentia (trn1/inf2 instances) using NeuronSDK.
+## Fine-tune a “Bert base cased" PyTorch model with AWS Trainium / Inferentia (trn1/inf2 instances) using NeuronSDK
 1. Compile model
 2. Train / Fine-tune model
 
@@ -29,3 +29,4 @@ python3 main.py --task=1 --num_workers=2
 ## References :<br>
 >[1] [Get Started with Neuron](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/quick-start/index.html)<br>
 >[2] [Get Started with Neuron on Ubuntu 22 with Neuron Multi-Framework DLAMI](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/setup/neuron-setup/multiframework/multi-framework-ubuntu22-neuron-dlami.html#setup-ubuntu22-multi-framework-dlami)<br>
+>[3] [Accelerated Linear Algebra](https://openxla.org/xla)<br>
