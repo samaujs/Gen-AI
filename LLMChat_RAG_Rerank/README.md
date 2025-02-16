@@ -1,6 +1,5 @@
 ## Build Retrieval Augmented Generation (RAG) based Generative AI (GenAI) application with Amazon Bedrock services
 ### The following describes the involved steps :
-### The following describes the involved steps :
 1. AWS boto3 clients
 >   - Create a 'bedrock_agent_runtime' client for making Amazon Knowledge Base retrieval requests
 >   - Create a 'bedrock-runtime' client for making LLM inference requests
