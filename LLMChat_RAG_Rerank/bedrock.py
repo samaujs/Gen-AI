@@ -1061,10 +1061,49 @@ class Chatbot:
 
         return gen_llm_response, self.memory_chat_history
 
+    def write_qa_to_json(self, modelId, question, answer, thumbUp):
+        filename = 'LLMChat-RAG-Rerank-QA.json'
+
+        # Create a datetime object
+        current_datetime = datetime.datetime.now()
+
+        # Convert to string with desired format
+        formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")  # Adjust format string as needed
+        print(formatted_datetime)
+
+        # Prepare item data
+        item = [{
+                'Model_Id'  : modelId,
+                'Timestamp' : formatted_datetime,
+                'Question'  : question,
+                'Answer'    : answer,
+                'ThumbUp'   : thumbUp
+        }]
+
+        # Write data to JSON file 
+        try:
+            with open(filename, 'r') as f:
+                existing_data = json.load(f)
+        except FileNotFoundError:
+            # Handle the case where the file doesn't exist yet
+            print(f"\n{filename} does not exist, create empty list\n")
+            existing_data = []  # Create an empty list
+            
+        # Combine existing and new data (if any existing data)
+        data_to_append = existing_data + item
+
+        # Open the JSON file in write mode (will create if it doesn't exist)
+        with open(filename, 'w') as f:
+            json.dump(data_to_append, f)
+
+        print(f"Successfully wrote Model_Id: {modelId}, Timestamp: {formatted_datetime}, and ThumbsUp: {thumbUp} to JSON file {filename}.\n")
+        print(f"Question: \n{question}\n")
+        print(f"Answer: \n{answer}\n")
+
     def write_qa_to_dynamodb(self, modelId, question, answer, thumbUp):
         # Configure boto3 client (replace with your credentials and region)
-        dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-1')
-        table = dynamodb.Table('GenAI-RAG-Chat-QA')
+        dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+        table = dynamodb.Table('GenAI-Rerank-RAG-Chat')
 
         # Create a datetime object
         current_datetime = datetime.datetime.now()

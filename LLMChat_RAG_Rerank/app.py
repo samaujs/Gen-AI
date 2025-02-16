@@ -12,6 +12,9 @@ from langchain_core.output_parsers import StrOutputParser
 # Added for citation with source in chat response
 from streamlit_extras.mention import mention
 
+# Using Streamlit to build the User interface
+from streamlit_feedback import streamlit_feedback
+
 # Configure session state
 HEAD_ICON = "images/aws-lol.png"
 USER_ICON = "images/user-icon.png"
@@ -45,12 +48,32 @@ clear = write_top_bar()
 
 # Section 2 : Select different foundational models
 st.divider()
+
+# Added to reset radio button when clear is true
+# Initialize default selection flag if not present
+if "model_selection" not in st.session_state:
+    st.session_state.model_selection = claude_model_native_title
+#else:
+#    print(f"Select radio button with prev_model : {st.session_state.prev_model}")
+#    st.session_state.model_selection = st.session_state.prev_model
+
 llm_select_model = st.radio(
     "Select the Foundational Model: \n\n",
     [claude_model_native_title, claude_model_title, nova_model_title],
     key="llm_select_model",
+
+    # Added to reset radio button when clear is true
+    index=[claude_model_native_title, claude_model_title, nova_model_title].index(st.session_state.model_selection),
+
     horizontal=True,
 )
+
+#st.session_state.prev_model = llm_select_model
+#st.session_state.model_selection = st.session_state.prev_model
+st.session_state.model_selection = llm_select_model
+
+# Update model_selection when radio changes
+print(f"Selected radio button : {llm_select_model}")
 
 if llm_select_model == claude_model_native_title:
     modelId = 'anthropic.claude-3-5-sonnet-20240620-v1:0'
@@ -99,6 +122,15 @@ if "input" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# Added for feedback
+if "prev_model" not in st.session_state:
+    st.session_state.prev_model = ""
+
+if "answer_fbk" not in st.session_state:
+    st.session_state.answer_fbk = []
+
+if "feedback_key" not in st.session_state:
+    st.session_state.feedback_key = 0
 
 # Reset all state variables
 if clear:
@@ -113,6 +145,15 @@ if clear:
 
     # Reset radio button
     # del st.session_state.llm_select_model # claude_model_native_title
+    # Set flag to use default model on next render
+    st.session_state.model_selection = claude_model_native_title
+    print(f"Current model selection after reset : {st.session_state.model_selection}")
+
+    # Added for feedback
+    st.session_state.prev_model = ""
+    st.session_state.answer_fbk = []
+    # Does not reload the streamlit_feedback widget, need to reload webpage to work
+    st.session_state.feedback_key = 0
 
 # Section 4 : Handling input from the user.
 def handle_input():
@@ -161,7 +202,7 @@ def handle_input():
     print("st.session_state.answers :", st.session_state.answers)
     print()
 
-# Section 4 :
+# Section 5 : Display all the Questions and Answers
 def write_user_message(md):
     col1, col2 = st.columns([1, 12])
 
@@ -186,10 +227,64 @@ def write_chat_message(md):
     with chat:
         render_answer(md["answer"])
 
-with st.container():
-    for q, a in zip(st.session_state.questions, st.session_state.answers):
-        write_user_message(q)
-        write_chat_message(a)
+# with st.container():
+#     for q, a in zip(st.session_state.questions, st.session_state.answers):
+#         write_user_message(q)
+#         write_chat_message(a)
+
+# Section 6 : Collecting answer feedback from user
+def write_user_feedback(answer_fbk_score):
+    """
+    Update the answer feedback history.
+
+    The Questions and Answers are already saved in st.session_state.questions and st.session_state.answers
+    """
+
+    st.session_state.answer_fbk.append(
+        {"answer_fbk": answer_fbk_score, "id": len(st.session_state.answer_fbk) + 1}
+    )
+    print()
+    print("Stored user feedback from responses :", st.session_state.answer_fbk)
+
+def _submit_feedback(user_response, emoji=None):
+    st.toast(f"Feedback submitted: {user_response}")
+    print(f"Feedback submitted: {user_response}, {emoji}")
+
+    write_user_feedback(answer_fbk_score=user_response['score'])
+
+    # Set new feedback key for next session
+    st.session_state.feedback_key += 1
+
+    # Save Questions and Answers with user feedback
+    question = st.session_state.questions[-1]['question']
+    answer = st.session_state.answers[-1]['answer']
+    thumbUp = True
+    
+    if user_response['score'] == '👎':
+        thumbUp = False
+
+    llm_chain = st.session_state["llm_chain"]
+
+    # Write to JSON formatted output file
+    llm_chain.write_qa_to_json(modelId = modelId,
+                               question = question,
+                               answer = answer,
+                               thumbUp = thumbUp)
+
+    # Write to DynamoDB table
+    llm_chain.write_qa_to_dynamodb(modelId = modelId,
+                                   question = question,
+                                   answer = answer,
+                                   thumbUp = thumbUp)
+
+def get_thumbs_count():
+    data = st.session_state.answer_fbk
+
+    # Count the number of entries with 'answer_fbk' equal to ''
+    count_thumbs_up = sum(item['answer_fbk'] == '👍' for item in data)
+    count_thumbs_down = sum(item['answer_fbk'] == '👎' for item in data)
+
+    return count_thumbs_up, count_thumbs_down
 
 
 st.markdown("---")
@@ -428,5 +523,55 @@ if user_query is not None and user_query != "":
            
         print()
         print("Updated prev_docs_chat_history :\n", prev_docs_chat_history)
+
+        # Added for feedback
+        question_with_id = {
+            "question": user_query,
+            "id": len(st.session_state.questions) + 1,
+        }
+        st.session_state.questions.append(question_with_id)
+
+        st.session_state.answers.append(
+            {"answer": streaming_response, "id": len(st.session_state.questions)}
+        )
+        st.session_state.input = ""
+
+        print()
+        print("st.session_state.questions :", st.session_state.questions)
+        print("st.session_state.answers :", st.session_state.answers)
+        print()
+
+# Added for feedback
+# if st.session_state.prev_model != modelId:
+if st.session_state.prev_model != llm_select_model:
+    # For different model, displays the last user feedback on LLM response
+    feedback_key = f"ans_feedback_{st.session_state.feedback_key}"
+else:
+    # For same model, increments the next uniquely identifier by 1 for the widget component
+    feedback_key = f"ans_feedback_{st.session_state.feedback_key + 1}" 
+
+# Set the prev_model
+# st.session_state.prev_model = modelId
+st.session_state.prev_model = llm_select_model
+
+print()
+print("^^ Updated prev_model ^^ :\n", st.session_state.prev_model)
+print(f"feedback_key : {feedback_key}")
+
+# Use the streamlit_feedback library to obtain user feedback on the generated LLM response
+if len(st.session_state.answers) > 0:
+    answer_fbk = streamlit_feedback(
+                                     feedback_type="thumbs",
+                                     align="center",  # "flex-start",
+                                     key=feedback_key,
+                                     on_submit=_submit_feedback
+                                    )
+    print(f"LLM answer feedback of {feedback_key} : {answer_fbk}\n")
+
+    if answer_fbk is not None:
+        count_thumbs_up, count_thumbs_down = get_thumbs_count()
+        print(f"Number of '👍' : {count_thumbs_up} and Number of '👎' : {count_thumbs_down}")
+        print()
+        st.write(f"Number of '👍' : {count_thumbs_up} and Number of '👎' : {count_thumbs_down}")
 
 print("\n** End of Program : {} **".format(user_query))
