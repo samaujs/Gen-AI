@@ -85,7 +85,22 @@ Start the application server using your configured Python virtual environment:
 python -m streamlit run streamlit_client/app.py --browser.gatherUsageStats false
 ```
 
-Once running, navigate to the local URL (usually **[http://localhost:8502](http://localhost:8502)**) in your web browser.
+Once running, navigate to the local URL (usually **[http://localhost:8501](http://localhost:8501)**) in your web browser.
+
+---
+
+## 🔄 Sample Request & Response Flow
+
+Here is a visual flowchart demonstrating how a user's prompt (e.g. "Book a flight & hotel in Paris") is processed sequentially by the Streamlit frontend UI, the ADK runner orchestrator, the individual agent nodes, and the Gemini API:
+
+![Sample Request & Response Flow](request_response_flow.png)
+
+1. **User Prompt**: The user enters a trip coordination request on the Streamlit UI.
+2. **Async Run**: The UI thread delegates the prompt execution asynchronously to the ADK `Runner` running inside a background worker thread.
+3. **Sub-agent Execution**: The active coordinator (e.g. `simple` workflow) identifies required details and makes sequential prompts (via instructions) to sub-agents (`FlightAgent`, `HotelAgent`).
+4. **Gemini Calls**: Each sub-agent calls the Gemini LLM with its specialized role instructions to generate structured outputs.
+5. **Live Updates**: As each agent finishes, the runner yields intermediate status updates. The UI worker thread puts these into a queue to render them live in the web browser.
+6. **Compilation**: Finally, `TripSummaryAgent` formats the responses into a markdown itinerary, which is rendered as the assistant's final response.
 
 ---
 
