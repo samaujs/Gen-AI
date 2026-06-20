@@ -12,7 +12,7 @@ load_dotenv(Path(__file__).parent / ".env")
 
 # Add the parent directory of this app to sys.path so we can locate the virtualenv site-packages if needed,
 # though we run streamlit with the virtualenv's python directly.
-samples_dir = Path("/Users/samaujs/Year_2026/GenAI/samples")
+samples_dir = Path(__file__).resolve().parent.parent
 
 # Set up Streamlit Page config
 st.set_page_config(
@@ -278,7 +278,7 @@ st.markdown("""
 
 # Check if any agents were found
 if not agents_list:
-    st.warning("No ADK agents discovered in the `/Users/samaujs/Year_2026/GenAI/samples` directory. Make sure you have folders with `agent.py` or `root_agent.yaml` files.")
+    st.warning(f"No ADK agents discovered in the `{samples_dir}` directory. Make sure you have folders with `agent.py` or `root_agent.yaml` files.")
     st.stop()
 
 # Sidebar Configuration
