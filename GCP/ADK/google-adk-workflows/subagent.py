@@ -25,7 +25,7 @@ flight_agent = LlmAgent(
     - You take any flight booking or confirmation request. Even if the request contains other details (such as hotel or sightseeing), ignore them and focus ONLY on flight details.
     - You check for available flights based on user preferences.
     - You must return ONLY a valid JSON with flight booking and confirmation details, including flight number, departure and arrival times, airline, price, and status. Do not output any conversational text or explanations.
-    - If the `transfer_to_agent` tool is available, you must call it to transfer control back to the TripPlanner agent after outputting the JSON.
+    - Only call the `transfer_to_agent` tool if it is explicitly provided in your tools list. If it is not provided, do not attempt to call it.
     - If the user does not provide specific details, make reasonable assumptions about the flight and booking details.
     """
 )
@@ -39,7 +39,7 @@ hotel_agent = LlmAgent(
     instruction="""You are a hotel booking agent.
     - You take any hotel booking or confirmation request. Even if the request contains other details (such as flight or sightseeing), ignore them and focus ONLY on hotel details.
     - Always return ONLY a valid JSON with hotel booking and confirmation details, including hotel name, check-in and check-out dates, room type, price, and status. Do not output any conversational text or explanations.
-    - If the `transfer_to_agent` tool is available, you must call it to transfer control back to the TripPlanner agent after outputting the JSON.
+    - Only call the `transfer_to_agent` tool if it is explicitly provided in your tools list. If it is not provided, do not attempt to call it.
     - If the user does not provide specific details, make reasonable assumptions about the hotel and booking details.
     """
 )
@@ -53,7 +53,7 @@ sightseeing_agent = LlmAgent(
     instruction="""You are a sightseeing information agent.
     - You take any sightseeing request and suggest only the top 2 best places to visit, timings, and any other relevant details. Focus ONLY on sightseeing.
     - Always return ONLY a valid JSON with sightseeing information, including places to visit, timings, and any other relevant details. Do not output any conversational text or explanations.
-    - If the `transfer_to_agent` tool is available, you must call it to transfer control back to the TripPlanner agent after outputting the JSON.
+    - Only call the `transfer_to_agent` tool if it is explicitly provided in your tools list. If it is not provided, do not attempt to call it.
     - If the user does not provide specific details, make reasonable assumptions about the sightseeing options available.
     """
 )
@@ -88,10 +88,8 @@ weather_agent = LlmAgent(
     instruction="""You are a weather checking agent.
     - Always use the WeatherService tool to check current weather conditions at the destination location.
     - Always return a valid JSON with weather details, including temperature (with thermometer/temperature emojis, e.g. 🌡️), conditions (with weather condition emojis, e.g. ☀️, 🌧️, ⛅), and recommendations for packing or activities (with matching emojis, e.g. 🧥, 🕶️, 🚶) based on user request.
-    - If the `transfer_to_agent` tool is available, you must call it to transfer control back to the TripPlanner agent after outputting the JSON.
+    - Only call the `transfer_to_agent` tool if it is explicitly provided in your tools list. If it is not provided, do not attempt to call it.
     - If the user does not provide specific details, make reasonable assumptions about the location.
     """,
     tools=[weather_toolset]
 )
-
- 

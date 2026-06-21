@@ -10,6 +10,10 @@ This project is a local workspace for developing, running, and analyzing multi-a
 samples/
 ├── .gitignore                    # Local environment files, pycache, and logs ignore patterns
 ├── README.md                     # Project documentation
+├── logs/                         # Observability logs and high-resolution sequence diagrams
+│   ├── observability_trace.txt   # Compiled agent communication logs
+│   ├── simple_agent_workflow.png # High-res simple workflow sequence diagram
+│   └── parallel_agent_workflow.png # High-res parallel workflow sequence diagram
 ├── google-adk-workflows/         # Multi-Agent backend orchestration modules
 │   ├── env.example               # Template environment settings
 │   ├── .env                      # Local key configurations (ignored)
@@ -118,6 +122,9 @@ Here is a visual flowchart demonstrating how a user's prompt (e.g. "Book a fligh
 ## ⚙️ Features
 
 - **Workflow Selector**: Switch between different multi-agent coordination modes (Simple, Dispatcher, Parallel, Self-Critic) on the fly.
-- **Model Selector**: Switch target runtimes between **Gemini 3.5 Flash** (`gemini-3.5-flash`) and **Gemini 3.1 Flash Lite** (`gemini-3.1-flash-lite`).
+- **Model Selector**: Switch target runtimes between **Gemini 3.5 Flash** (`gemini-3.5-flash`), **Gemini 3.1 Pro - Preview** (`gemini-3.1-pro-preview`), and **Gemini 3.1 Flash Lite** (`gemini-3.1-flash-lite`).
+- **Real-Time Response Streaming**: Assistant responses stream token-by-token and agent-by-agent in real-time as they are yielded by the ADK event stream.
+- **Explicit Thinking Indicator & Spinner**: Displays a clean spinning icon ("Agent is still working on your query...") at the bottom of the chat layout while the agents are executing background operations, closing automatically as soon as the final compilation finishes.
 - **Cache Reloading**: Edit agent files locally and click **Reload Agent Source** to clear memory caches and load your new agent parameters immediately.
 - **Sub-Agent Live Logging**: View real-time status updates of intermediate agent runs (e.g. `FlightAgent` executing, `HotelAgent` booking) inside collapsed status drawers before the final compiled answer arrives.
+- **Observability Sequence Diagrams**: Creates sequence flow diagrams (`simple_agent_workflow.png` and `parallel_agent_workflow.png`) and detailed trajectory logs in the `logs/` directory.

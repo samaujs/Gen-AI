@@ -318,7 +318,16 @@ st.sidebar.markdown("<h2 style='color: white; font-family: Outfit; margin-bottom
 
 # Agent Selector
 agent_names = [a["rel_path"] for a in agents_list]
-selected_rel_path = st.sidebar.selectbox("Select Agent Workflow", options=agent_names)
+try:
+    default_agent_index = agent_names.index("google-adk-workflows/parallel")
+except ValueError:
+    default_agent_index = 0
+
+selected_rel_path = st.sidebar.selectbox(
+    "Select Agent Workflow",
+    options=agent_names,
+    index=default_agent_index
+)
 selected_agent = next(a for a in agents_list if a["rel_path"] == selected_rel_path)
 
 # Set up environment variables overrides
@@ -477,103 +486,122 @@ if user_prompt := st.chat_input("Ask the agent something..."):
         st.write(user_prompt)
         
     # Execution
-    with st.spinner("Invoking agent workflow..."):
-        # Real-time multi-agent logging container
-        status_box = st.status("🚀 Agent executing...", expanded=True)
-        
-        # Dictionary to accumulate response chunks by agent author
-        agent_responses = {}
-        # Accumulate trace events for observability
-        run_trace = []
-        
-        try:
-            # Run the agent stream
-            event_stream = run_agent_stream(
-                agents_parent_dir=selected_agent["agents_dir"],
-                agent_name=selected_agent["name"],
-                prompt=user_prompt
-            )
+    # Create containers outside the spinner so they render above it
+    status_container = st.container()
+    chat_container = st.container()
+    spinner_container = st.empty()
+    
+    with spinner_container.container():
+        with st.spinner("Agent is still working on the query..."):
+            with status_container:
+                # Real-time multi-agent logging container
+                status_box = st.status("🚀 Agent executing...", expanded=True)
             
-            for event in event_stream:
-                author = event.author or "Agent"
+            # Dictionary to accumulate response chunks by agent author
+            agent_responses = {}
+            # Keep track of active chat placeholders for real-time streaming
+            chat_placeholders = {}
+            # Accumulate trace events for observability
+            run_trace = []
+            
+            try:
+                # Run the agent stream
+                event_stream = run_agent_stream(
+                    agents_parent_dir=selected_agent["agents_dir"],
+                    agent_name=selected_agent["name"],
+                    prompt=user_prompt
+                )
                 
-                # Extract parts for trajectory observability
-                trace_parts = []
-                if event.content and event.content.parts:
-                    for part in event.content.parts:
-                        part_info = {}
-                        if getattr(part, "text", None):
-                            part_info["type"] = "text"
-                            part_info["value"] = part.text
-                        elif getattr(part, "function_call", None):
-                            part_info["type"] = "function_call"
-                            part_info["name"] = part.function_call.name
-                            part_info["args"] = part.function_call.args
-                        elif getattr(part, "function_response", None):
-                            part_info["type"] = "function_response"
-                            part_info["name"] = part.function_response.name
-                            part_info["response"] = part.function_response.response
+                for event in event_stream:
+                    author = event.author or "Agent"
+                    
+                    # Extract parts for trajectory observability
+                    trace_parts = []
+                    if event.content and event.content.parts:
+                        for part in event.content.parts:
+                            part_info = {}
+                            if getattr(part, "text", None):
+                                part_info["type"] = "text"
+                                part_info["value"] = part.text
+                            elif getattr(part, "function_call", None):
+                                part_info["type"] = "function_call"
+                                part_info["name"] = part.function_call.name
+                                part_info["args"] = part.function_call.args
+                            elif getattr(part, "function_response", None):
+                                part_info["type"] = "function_response"
+                                part_info["name"] = part.function_response.name
+                                part_info["response"] = part.function_response.response
+                            
+                            if part_info:
+                                trace_parts.append(part_info)
+                    
+                    usage = None
+                    if getattr(event, "usage_metadata", None):
+                        usage = {
+                            "prompt_tokens": event.usage_metadata.prompt_token_count,
+                            "candidates_tokens": event.usage_metadata.candidates_token_count,
+                            "total_tokens": event.usage_metadata.total_token_count
+                        }
+                    
+                    run_trace.append({
+                        "author": author,
+                        "timestamp": getattr(event, "timestamp", 0.0),
+                        "parts": trace_parts,
+                        "usage": usage
+                    })
+                    
+                    # Log tool calls/responses in status box
+                    for part_info in trace_parts:
+                        if part_info["type"] == "function_call":
+                            status_box.write(f"⚙️ **{author}** calling tool `{part_info['name']}`")
+                        elif part_info["type"] == "function_response":
+                            status_box.write(f"📥 **{author}** tool returned response")
+                    
+                    # Fetch text content
+                    text = ""
+                    if event.content and event.content.parts:
+                        text = "".join(part.text for part in event.content.parts if part.text)
+                    
+                    if text:
+                        # Accumulate response
+                        if author not in agent_responses:
+                            agent_responses[author] = ""
+                            # Create chat message placeholder dynamically
+                            avatar_icon = get_avatar_for_author(author)
+                            with chat_container:
+                                with st.chat_message("assistant", avatar=avatar_icon):
+                                    chat_placeholders[author] = st.empty()
                         
-                        if part_info:
-                            trace_parts.append(part_info)
+                        agent_responses[author] += text
+                        
+                        # Update streaming response
+                        chat_placeholders[author].markdown(f"### {author}\n{agent_responses[author]}")
+                        
+            except Exception as run_err:
+                spinner_container.empty()
+                status_box.update(label="❌ Execution Failed", state="error")
+                st.error(f"Execution failed: {run_err}")
+            else:
+                spinner_container.empty()
+                status_box.update(label="✅ Execution Completed", state="complete")
                 
-                usage = None
-                if getattr(event, "usage_metadata", None):
-                    usage = {
-                        "prompt_tokens": event.usage_metadata.prompt_token_count,
-                        "candidates_tokens": event.usage_metadata.candidates_token_count,
-                        "total_tokens": event.usage_metadata.total_token_count
-                    }
-                
-                run_trace.append({
-                    "author": author,
-                    "timestamp": getattr(event, "timestamp", 0.0),
-                    "parts": trace_parts,
-                    "usage": usage
+                # Save trajectory
+                st.session_state.trajectories.append({
+                    "prompt": user_prompt,
+                    "agent": selected_agent["name"],
+                    "trace": run_trace
                 })
                 
-                # Fetch text content
-                text = ""
-                if event.content and event.content.parts:
-                    text = "".join(part.text for part in event.content.parts if part.text)
-                
-                if text:
-                    # Log event in status box
-                    status_box.write(f"**[{author}]**: {text}")
+                # Post final consolidated results to the chat history
+                for author, response_text in agent_responses.items():
+                    avatar_icon = get_avatar_for_author(author)
+                    formatted_response = f"### {author}\n{response_text}"
                     
-                    # Accumulate for final chat message
-                    if author not in agent_responses:
-                        agent_responses[author] = ""
-                    agent_responses[author] += text
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": formatted_response,
+                        "avatar": avatar_icon
+                    })
                     
-        except Exception as run_err:
-            status_box.update(label="❌ Execution Failed", state="error")
-            st.error(f"Execution failed: {run_err}")
-        else:
-            status_box.update(label="✅ Execution Completed", state="complete")
-            
-            # Save trajectory
-            st.session_state.trajectories.append({
-                "prompt": user_prompt,
-                "agent": selected_agent["name"],
-                "trace": run_trace
-            })
-            
-            # Post final consolidated results to the chat
-            for author, response_text in agent_responses.items():
-                avatar_icon = get_avatar_for_author(author)
-                
-                # Format response nicely
-                formatted_response = f"### {author}\n{response_text}"
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": formatted_response,
-                    "avatar": avatar_icon
-                })
-                
-                with st.chat_message("assistant", avatar=avatar_icon):
-                    st.write(formatted_response)
-                    
-            # Force refresh so streamlit re-renders with new history
-            st.rerun()
+                # Force refresh so streamlit re-renders with new history
+                st.rerun()
