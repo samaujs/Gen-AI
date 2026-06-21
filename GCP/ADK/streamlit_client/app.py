@@ -263,6 +263,41 @@ def run_agent_stream(agents_parent_dir, agent_name, prompt):
         except queue.Empty:
             raise TimeoutError("The agent run timed out (no events received for 3 minutes).")
 
+@st.dialog("Agent Communication & Trajectory Trace", width="large")
+def show_trajectory_details(trajectory):
+    st.markdown(f"### Trajectory for: *\"{trajectory['prompt']}\"*")
+    st.markdown(f"**Orchestrator**: `{trajectory['agent']}`")
+    st.markdown("<hr style='border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+    
+    for event in trajectory["trace"]:
+        author = event["author"]
+        avatar = get_avatar_for_author(author)
+        
+        with st.container(border=True):
+            col1, col2 = st.columns([1, 15])
+            with col1:
+                st.markdown(f"<div style='font-size: 1.5em; margin-top: 3px;'>{avatar}</div>", unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"**{author}**")
+            
+            for part in event["parts"]:
+                if part["type"] == "text":
+                    st.markdown(part["value"])
+                elif part["type"] == "function_call":
+                    st.markdown(f"⚙️ **Tool Call**: `{part['name']}`")
+                    st.json(part["args"])
+                elif part["type"] == "function_response":
+                    st.markdown(f"📥 **Tool Response**: `{part['name']}`")
+                    st.json(part["response"])
+            
+            if event.get("usage"):
+                st.markdown(
+                    f"<div style='font-size: 0.8em; color: #90a4ae; margin-top: 10px; text-align: right;'>"
+                    f"Token Usage — Prompt: {event['usage']['prompt_tokens']} | Candidates: {event['usage']['candidates_tokens']} | Total: {event['usage']['total_tokens']}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
 # ----------------- MAIN UI -----------------
 
 # Discover Agents
@@ -271,8 +306,8 @@ agents_list = discover_agents(samples_dir)
 # Title Header
 st.markdown("""
     <div class="header-container">
-        <h1 class="header-title">ADK Agent Hub</h1>
-        <p class="header-subtitle">Select and run your Google Agent Development Kit (ADK) workflows locally.</p>
+        <h1 class="header-title">Premium Tour Planning Agent</h1>
+        <p class="header-subtitle">ADK Strike Force with Google Agent Development Kit (ADK) that runs locally.</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -378,17 +413,41 @@ try:
 except Exception as load_err:
     st.sidebar.error(f"Could not load metadata: {load_err}")
 
+# Agent Observability & Trajectories
+st.sidebar.markdown("<hr style='border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='color: white; font-family: Outfit; font-size: 1.1em;'>🕵️ Agent Observability</h3>", unsafe_allow_html=True)
+
+if "trajectories" not in st.session_state or not st.session_state.trajectories:
+    st.sidebar.info("No active trajectories recorded yet. Run a prompt to view the trace.")
+else:
+    run_options = []
+    for idx, traj in enumerate(st.session_state.trajectories):
+        prompt_preview = traj["prompt"][:22] + "..." if len(traj["prompt"]) > 22 else traj["prompt"]
+        run_options.append(f"Run {idx + 1}: {prompt_preview} ({traj['agent']})")
+    
+    selected_run_idx = st.sidebar.selectbox(
+        "Select Trajectory",
+        options=range(len(run_options)),
+        format_func=lambda x: run_options[x]
+    )
+    
+    if st.sidebar.button("🔍 View Communication Trace", use_container_width=True):
+        show_trajectory_details(st.session_state.trajectories[selected_run_idx])
+
 # Reset Chat Button
 st.sidebar.markdown("<hr style='border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
 if st.sidebar.button("🧹 Clear Chat History", use_container_width=True):
     st.session_state.chat_history = []
+    st.session_state.trajectories = []
     st.rerun()
 
 # ----------------- CHAT ROOM -----------------
 
-# Initialize Chat History
+# Initialize Chat History and Trajectories
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "trajectories" not in st.session_state:
+    st.session_state.trajectories = []
 
 # Display previous messages
 for msg in st.session_state.chat_history:
@@ -422,6 +481,8 @@ if user_prompt := st.chat_input("Ask the agent something..."):
         
         # Dictionary to accumulate response chunks by agent author
         agent_responses = {}
+        # Accumulate trace events for observability
+        run_trace = []
         
         try:
             # Run the agent stream
@@ -433,6 +494,41 @@ if user_prompt := st.chat_input("Ask the agent something..."):
             
             for event in event_stream:
                 author = event.author or "Agent"
+                
+                # Extract parts for trajectory observability
+                trace_parts = []
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        part_info = {}
+                        if getattr(part, "text", None):
+                            part_info["type"] = "text"
+                            part_info["value"] = part.text
+                        elif getattr(part, "function_call", None):
+                            part_info["type"] = "function_call"
+                            part_info["name"] = part.function_call.name
+                            part_info["args"] = part.function_call.args
+                        elif getattr(part, "function_response", None):
+                            part_info["type"] = "function_response"
+                            part_info["name"] = part.function_response.name
+                            part_info["response"] = part.function_response.response
+                        
+                        if part_info:
+                            trace_parts.append(part_info)
+                
+                usage = None
+                if getattr(event, "usage_metadata", None):
+                    usage = {
+                        "prompt_tokens": event.usage_metadata.prompt_token_count,
+                        "candidates_tokens": event.usage_metadata.candidates_token_count,
+                        "total_tokens": event.usage_metadata.total_token_count
+                    }
+                
+                run_trace.append({
+                    "author": author,
+                    "timestamp": getattr(event, "timestamp", 0.0),
+                    "parts": trace_parts,
+                    "usage": usage
+                })
                 
                 # Fetch text content
                 text = ""
@@ -453,6 +549,13 @@ if user_prompt := st.chat_input("Ask the agent something..."):
             st.error(f"Execution failed: {run_err}")
         else:
             status_box.update(label="✅ Execution Completed", state="complete")
+            
+            # Save trajectory
+            st.session_state.trajectories.append({
+                "prompt": user_prompt,
+                "agent": selected_agent["name"],
+                "trace": run_trace
+            })
             
             # Post final consolidated results to the chat
             for author, response_text in agent_responses.items():
