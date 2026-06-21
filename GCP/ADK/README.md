@@ -13,7 +13,8 @@ samples/
 ├── google-adk-workflows/         # Multi-Agent backend orchestration modules
 │   ├── env.example               # Template environment settings
 │   ├── .env                      # Local key configurations (ignored)
-│   ├── subagent.py               # Core specialists (Flight, Hotel, Sightseeing, Summary)
+│   ├── weather_server.py         # Local FastMCP weather server
+│   ├── subagent.py               # Core specialists (Flight, Hotel, Sightseeing, Weather, Summary)
 │   ├── simple/                   # Sequential coordination coordinator
 │   ├── dispatcher/               # Tool-based router coordinator
 │   ├── parallel/                 # Concurrent executor coordinator
@@ -72,6 +73,30 @@ python -m streamlit run streamlit_client/app.py --browser.gatherUsageStats false
 ```
 
 Once running, navigate to the local URL (usually **[http://localhost:8501](http://localhost:8501)**) in your web browser.
+
+---
+
+## 🌤️ MCP Weather Integration
+
+To retrieve real-time weather details for the travel planning system, the application implements a Model Context Protocol (MCP) weather integration:
+
+### 1. Local Weather Server (`weather_server.py`)
+- Built using the Python `mcp` library and the `FastMCP` framework.
+- Exposes a `get_current_weather(location: str)` tool.
+- Fetches real-time reports via `https://wttr.in/` using `httpx` (returns a single-line summary with emojis).
+- Provides pre-defined mock forecasts for Tokyo, Paris, and New Delhi as local fallbacks if offline.
+- Communicates using standard input/output (`stdio`) transport.
+
+### 2. Weather Agent (`WeatherAgent` in `subagent.py`)
+- Utilizes the `McpToolset` class to connect to the weather server subprocess.
+- Defines communication params via `StdioConnectionParams` and `StdioServerParameters` pointing to the virtualenv Python interpreter and the server script.
+- Queries `WeatherService` and outputs a structured JSON response decorated with weather emojis (e.g. 🌡️, 🌤️, 👕, 🧥).
+
+### 3. Workflow Integration
+- **Simple Coordinator**: Invokes the `WeatherAgent` sequentially as a sub-agent.
+- **Dispatcher Coordinator**: Invokes the `WeatherAgent` as an `AgentTool` based on dynamic intent routing.
+- **Parallel Coordinator**: Resolves flight search, hotel search, and weather details concurrently.
+- **Self-Critic Coordinator**: Validates the presence of weather information and relevant emojis in the final travel summary via a dedicated critique agent (`TripSummaryReviewer`).
 
 ---
 
