@@ -30,21 +30,7 @@ samples/
 
 The workspace separates **Agent Logic** from the **Client User Interface**:
 
-```
-┌────────────────────────────────────────┐
-│         Streamlit Client (UI)          │
-│  - App Layout & Custom CSS             │
-│  - Agent Discovery & Cache Purging     │
-│  - Threaded Queue Event Listener       │
-└───────────────────┬────────────────────┘
-                    │  Async run_agent_stream()
-┌───────────────────▼────────────────────┐
-│      Google ADK Engine (Backend)       │
-│  - Runner & InMemory Services          │
-│  - Orchestrator (Sequential/Parallel)  │
-│  - Sub-Agents (Flight, Hotel, etc.)    │
-└────────────────────────────────────────┘
-```
+![Server & Client Breakdown](project_architecture.png)
 
 1. **Agent Backend (`google-adk-workflows/`)**: Implements specialized agents (Flight, Hotel, Sightseeing, and Compilation agents) and defines workflows (Simple, Dispatcher, Parallel, and Self-Critic) that coordinate how they run sequentially or concurrently.
 2. **Streamlit Client (`streamlit_client/`)**: Scans the workspace directory to discover agents on disk, dynamically configures runtime parameters (Gemini API Key and Model Name), purges Python's module cache to hot-reload changes instantly, and streams agent outputs live using a background thread and a thread-safe event queue.
