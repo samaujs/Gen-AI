@@ -22,7 +22,7 @@ weather_tool = agent_tool.AgentTool(agent=weather_agent)
 
 
 root_agent = LlmAgent(
-    model=os.getenv('MODEL_NAME', 'gemini-2.0-flash'),
+    model=os.getenv('MODEL_NAME', 'gemini-3.1-flash-lite'),
     name="TripPlanner",
     instruction=f"""
    Acts as a comprehensive trip planner.

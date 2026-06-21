@@ -342,9 +342,10 @@ if api_key_input:
 # Model Name Override
 model_options = {
     "Gemini 3.5 Flash": "gemini-3.5-flash",
+    "Gemini 3.1 Pro - Preview": "gemini-3.1-pro-preview",
     "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite"
 }
-current_model = os.environ.get("MODEL_NAME", "gemini-3.5-flash")
+current_model = os.environ.get("MODEL_NAME", "gemini-3.1-flash-lite")
 
 # Determine default index
 try:
@@ -423,7 +424,7 @@ else:
     run_options = []
     for idx, traj in enumerate(st.session_state.trajectories):
         prompt_preview = traj["prompt"][:22] + "..." if len(traj["prompt"]) > 22 else traj["prompt"]
-        run_options.append(f"Run {idx + 1}: {prompt_preview} ({traj['agent']})")
+        run_options.append(f"Query {idx + 1}: {prompt_preview} ({traj['agent']})")
     
     selected_run_idx = st.sidebar.selectbox(
         "Select Trajectory",

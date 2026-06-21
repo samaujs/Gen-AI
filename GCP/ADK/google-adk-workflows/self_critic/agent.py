@@ -25,7 +25,7 @@ from subagent import (
 
 # Trip Summary Reviewer - specific to self-critic workflow
 trip_summary_reviewer = LlmAgent(
-    model=os.getenv('MODEL_NAME', 'gemini-2.0-flash'),
+    model=os.getenv('MODEL_NAME', 'gemini-3.1-flash-lite'),
     name="TripSummaryReviewer",
     instruction="""Review the trip summary in {trip_summary}.
     - Check if the trip summary includes all necessary details such as flight information, hotel booking, weather details, sightseeing options, and any other relevant trip details.
