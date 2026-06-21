@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import all agents from common subagent file
-from subagent import flight_agent, hotel_agent, sightseeing_agent, trip_summary_agent
+from subagent import flight_agent, hotel_agent, sightseeing_agent, trip_summary_agent, weather_agent
 
 plan_parallel = ParallelAgent(
     name="ParallelTripPlanner",
-    sub_agents=[flight_agent, hotel_agent],
-    description="Fetch flight and hotel information parallely. Each sub-agent will return a JSON response with their respective details."
+    sub_agents=[flight_agent, hotel_agent, weather_agent],
+    description="Fetch flight, hotel, and weather information parallely. Each sub-agent will return a JSON response with their respective details."
 )
 
 

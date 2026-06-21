@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 # load_dotenv()
 
 # Import all agents from common subagent file
-from subagent import flight_agent, hotel_agent, sightseeing_agent
+from subagent import flight_agent, hotel_agent, sightseeing_agent, weather_agent
 
 MODEL_GEMINI_3_1_FLASH_LITE = "gemini-3.1-flash-lite"
 
@@ -26,8 +26,9 @@ root_agent = LlmAgent(
     - Use the FlightAgent to find and book flights
     - Use the HotelAgent to find and book accommodation
     - Use the SightseeingAgent to find information on places to visit
+    - Use the WeatherAgent to check current weather conditions at the destination
     - Coordinate between all agents to provide complete trip planning
-    - Ensure all user requirements are met across flight, hotel, and sightseeing needs
+    - Ensure all user requirements are met across flight, hotel, sightseeing, and weather needs
     """,
-    sub_agents=[flight_agent, hotel_agent, sightseeing_agent] # The coordinator manages these sub-agents
+    sub_agents=[flight_agent, hotel_agent, sightseeing_agent, weather_agent] # The coordinator manages these sub-agents
 ) 

@@ -19,7 +19,8 @@ from subagent import (
     flight_agent, 
     hotel_agent, 
     sightseeing_agent, 
-    trip_summary_agent
+    trip_summary_agent,
+    weather_agent
 )
 
 # Trip Summary Reviewer - specific to self-critic workflow
@@ -27,7 +28,7 @@ trip_summary_reviewer = LlmAgent(
     model=os.getenv('MODEL_NAME', 'gemini-2.0-flash'),
     name="TripSummaryReviewer",
     instruction="""Review the trip summary in {trip_summary}.
-    - Check if the trip summary includes all necessary details such as flight information, hotel booking, sightseeing options, and any other relevant trip details.
+    - Check if the trip summary includes all necessary details such as flight information, hotel booking, weather details, sightseeing options, and any other relevant trip details.
     - Ensure the summary is well-structured and clearly presents all trip details in an organized manner.
     - If the summary meets quality standards, output 'pass'. If it does not meet the standards, output 'fail'""",
     output_key="review_status",
@@ -36,8 +37,8 @@ trip_summary_reviewer = LlmAgent(
 
 plan_parallel = ParallelAgent(
     name="ParallelTripPlanner",
-    sub_agents=[flight_agent, hotel_agent],
-    description="Fetch flight and hotel information parallely. Each sub-agent will return a JSON response with their respective details."
+    sub_agents=[flight_agent, hotel_agent, weather_agent],
+    description="Fetch flight, hotel, and weather information parallely. Each sub-agent will return a JSON response with their respective details."
 )
 
 # Custom validation agent - specific to self-critic workflow

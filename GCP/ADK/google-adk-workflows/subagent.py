@@ -60,8 +60,34 @@ trip_summary_agent = LlmAgent(
     # Select LLM 
     model=MODEL_GEMINI_3_1_FLASH_LITE,
     name="TripSummaryAgent",
-    instruction="Summarize the trip details from the flight, hotel, and sightseeing agents. Summarise JSON responses into a single summary document with all trip information like a travel itinerary. The summary should be well-structured and clearly present all trip details in an organized manner using text format only like a travel itinerary.",
+    instruction="Summarize the trip details from the flight, hotel, sightseeing, and weather agents. Summarise JSON responses into a single summary document with all trip information like a travel itinerary. The summary should be well-structured and clearly present all trip details in an organized manner using text format only like a travel itinerary. Under the weather update section, include relevant weather emojis (e.g. ☀️, 🌧️, ⛅) to make it visually engaging.",
     output_key="trip_summary"
+)
+
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, StdioServerParameters
+
+# Weather MCP Toolset pointing to the local python weather server
+weather_toolset = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command='/Users/samaujs/Year_2026/GenAI/VirtualEnv/gen_ai/bin/python',
+            args=['/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows/weather_server.py']
+        )
+    )
+)
+
+# Weather Agent
+weather_agent = LlmAgent(
+    model=os.getenv('MODEL_NAME', 'gemini-3.5-flash'),
+    name="WeatherAgent",
+    description="Weather checking agent",
+    instruction="""You are a weather checking agent.
+    - Always use the WeatherService tool to check current weather conditions at the destination location.
+    - Always return a valid JSON with weather details, including temperature (with thermometer/temperature emojis, e.g. 🌡️), conditions (with weather condition emojis, e.g. ☀️, 🌧️, ⛅), and recommendations for packing or activities (with matching emojis, e.g. 🧥, 🕶️, 🚶) based on user request.
+    - If the user does not provide specific details, make reasonable assumptions about the location.
+    """,
+    tools=[weather_toolset]
 )
 
  
