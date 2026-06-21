@@ -121,18 +121,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function to clear python import caches so environment changes apply immediately
-def clear_agent_cache(agent_name: str):
-    to_delete = []
+# Helper function to clear python import caches so environment changes and parent ownerships apply cleanly
+def clear_all_agent_caches():
+    to_delete = ["subagent", "simple", "dispatcher", "parallel", "self_critic"]
     for module_name in list(sys.modules.keys()):
-        if module_name == agent_name or module_name.startswith(f"{agent_name}."):
-            to_delete.append(module_name)
-    # Also pop common subagent module if it's imported
-    if "subagent" in sys.modules:
-        to_delete.append("subagent")
-    
-    for key in to_delete:
-        sys.modules.pop(key, None)
+        for name in to_delete:
+            if module_name == name or module_name.startswith(f"{name}."):
+                sys.modules.pop(module_name, None)
 
 # Helper to scan for ADK Agents in GenAI/samples
 @st.cache_data(show_spinner="Scanning local directory for ADK agents...")
@@ -198,6 +193,8 @@ def run_agent_stream(agents_parent_dir, agent_name, prompt):
     
     async def runner_task():
         try:
+            # Clear all agent caches to avoid parent conflicts
+            clear_all_agent_caches()
             # Set up the loader
             loader = AgentLoader(agents_dir=str(agents_parent_dir))
             agent_or_app = loader.load_agent(agent_name)
@@ -365,8 +362,8 @@ os.environ["MODEL_NAME"] = selected_model
 
 # Clear Cache / Reload button
 if st.sidebar.button("🔄 Reload Agent Source"):
-    clear_agent_cache(selected_agent["name"])
-    st.toast(f"Cleared cache for agent '{selected_agent['name']}'!", icon="🔄")
+    clear_all_agent_caches()
+    st.toast("Cleared all agent caches successfully!", icon="🔄")
 
 st.sidebar.markdown("<hr style='border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
 
@@ -375,6 +372,8 @@ st.sidebar.markdown("<h3 style='color: white; font-family: Outfit; font-size: 1.
 
 # Load the selected agent for metadata inspection
 try:
+    # Clear all agent caches to avoid parent conflicts
+    clear_all_agent_caches()
     # Set parent path to sys.path so it can import subagent modules
     agent_parent = str(selected_agent["agents_dir"])
     if agent_parent not in sys.path:
@@ -412,6 +411,8 @@ try:
                 </div>
             """, unsafe_allow_html=True)
 except Exception as load_err:
+    import traceback
+    traceback.print_exc()
     st.sidebar.error(f"Could not load metadata: {load_err}")
 
 # Agent Observability & Trajectories
@@ -463,7 +464,7 @@ if not os.environ.get("GOOGLE_API_KEY"):
 # User Input Box
 if user_prompt := st.chat_input("Ask the agent something..."):
     # Clear cache before running to ensure updated env vars are evaluated
-    clear_agent_cache(selected_agent["name"])
+    clear_all_agent_caches()
     
     # Add user message to history
     st.session_state.chat_history.append({

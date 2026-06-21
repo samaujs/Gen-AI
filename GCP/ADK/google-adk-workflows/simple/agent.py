@@ -20,15 +20,15 @@ root_agent = LlmAgent(
     model=MODEL_GEMINI_3_1_FLASH_LITE,
 
     name="TripPlanner",
-    instruction="""
-    Acts as a comprehensive trip planner.
-    - Use the FlightAgent to find and book flights
-    - Use the HotelAgent to find and book accommodation
-    - Use the SightseeingAgent to find information on places to visit
-    - Use the WeatherAgent to check current weather conditions at the destination
-    - Coordinate between all agents to provide complete trip planning
-    - Ensure all user requirements are met across flight, hotel, sightseeing, and weather needs
-    - Complete the task and provide a final compiled itinerary without asking the user clarifying questions. Make reasonable assumptions for missing details.
+    instruction="""You are a comprehensive trip planner coordinator.
+    Based on the user request, you must sequentially invoke the sub-agents one by one to gather all necessary trip details:
+    1. First, call `transfer_to_agent` with `FlightAgent` to search and book flights.
+    2. Once `FlightAgent` has responded with the flights, call `transfer_to_agent` with `HotelAgent` to book accommodation.
+    3. Once `HotelAgent` has responded with the hotel details, call `transfer_to_agent` with `WeatherAgent` to check destination weather.
+    4. Once `WeatherAgent` has responded with the weather details, call `transfer_to_agent` with `SightseeingAgent` to get sightseeing recommendations.
+    5. Once all four sub-agents have responded, compile all the information (flights, hotel, weather, and sightseeing) into a single, beautifully structured 15-day travel itinerary with daily details.
+    
+    Ensure all user requirements are met. Do not ask the user clarifying questions; make reasonable assumptions for missing details.
     """,
     sub_agents=[flight_agent, hotel_agent, sightseeing_agent, weather_agent] # The coordinator manages these sub-agents
 ) 
