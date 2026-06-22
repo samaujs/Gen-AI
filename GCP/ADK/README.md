@@ -10,10 +10,17 @@ This project is a local workspace for developing, running, and analyzing multi-a
 samples/
 ├── .gitignore                    # Local environment files, pycache, and logs ignore patterns
 ├── README.md                     # Project documentation
-├── logs/                         # Observability logs and high-resolution sequence diagrams
+├── logs/                         # Observability traces and execution logs
 │   ├── observability_trace.txt   # Compiled agent communication logs
+│   └── nz_observability_trace.txt # Flight/hotel search communication logs
+├── images/                       # High-resolution diagrams and screenshots
+│   ├── final_itinerary_screenshot.png # Streamlit UI final itinerary screenshot
+│   ├── observability_trace_screenshot.png # Streamlit UI observability trace screenshot
+│   ├── project_architecture.png  # Server & client breakdown diagram
+│   ├── request_response_flow.png # Step-by-step request/response flowchart
 │   ├── simple_agent_workflow.png # High-res simple workflow sequence diagram
-│   └── parallel_agent_workflow.png # High-res parallel workflow sequence diagram
+│   ├── parallel_agent_workflow.png # High-res parallel workflow sequence diagram
+│   └── parallel_agent_architecture.png # Enhanced high-level agent architecture diagram
 ├── google-adk-workflows/         # Multi-Agent backend orchestration modules
 │   ├── env.example               # Template environment settings
 │   ├── .env                      # Local key configurations (ignored)
@@ -35,7 +42,7 @@ samples/
 
 The workspace separates **Agent Logic** from the **Client User Interface**:
 
-![Server & Client Breakdown](project_architecture.png)
+![Server & Client Breakdown](images/project_architecture.png)
 
 1. **Agent Backend (`google-adk-workflows/`)**: Implements specialized agents (Flight, Hotel, Sightseeing, and Compilation agents) and defines workflows (Simple, Dispatcher, Parallel, and Self-Critic) that coordinate how they run sequentially or concurrently.
 2. **Streamlit Client (`streamlit_client/`)**: Scans the workspace directory to discover agents on disk, dynamically configures runtime parameters (Gemini API Key and Model Name), purges Python's module cache to hot-reload changes instantly, and streams agent outputs live using a background thread and a thread-safe event queue.
@@ -108,7 +115,7 @@ To retrieve real-time weather details for the travel planning system, the applic
 
 Here is a visual flowchart demonstrating how a user's prompt (e.g. "Book a flight & hotel in Paris") is processed sequentially by the Streamlit frontend UI, the ADK runner orchestrator, the individual agent nodes, and the Gemini API:
 
-![Sample Request & Response Flow](request_response_flow.png)
+![Sample Request & Response Flow](images/request_response_flow.png)
 
 1. **User Prompt**: The user enters a trip coordination request on the Streamlit UI.
 2. **Async Run**: The UI thread delegates the prompt execution asynchronously to the ADK `Runner` running inside a background worker thread.
@@ -127,4 +134,4 @@ Here is a visual flowchart demonstrating how a user's prompt (e.g. "Book a fligh
 - **Explicit Thinking Indicator & Spinner**: Displays a clean spinning icon ("Agent is still working on your query...") at the bottom of the chat layout while the agents are executing background operations, closing automatically as soon as the final compilation finishes.
 - **Cache Reloading**: Edit agent files locally and click **Reload Agent Source** to clear memory caches and load your new agent parameters immediately.
 - **Sub-Agent Live Logging**: View real-time status updates of intermediate agent runs (e.g. `FlightAgent` executing, `HotelAgent` booking) inside collapsed status drawers before the final compiled answer arrives.
-- **Observability Sequence Diagrams**: Creates sequence flow diagrams (`simple_agent_workflow.png` and `parallel_agent_workflow.png`) and detailed trajectory logs in the `logs/` directory.
+- **Observability Sequence Diagrams**: Creates sequence flow diagrams (`simple_agent_workflow.png` and `parallel_agent_workflow.png` in the `images/` directory) and detailed trajectory logs in the `logs/` directory.
