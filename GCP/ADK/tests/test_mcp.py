@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 # Add samples/google-adk-workflows to path
-workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows")
+workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows")
 sys.path.insert(0, str(workflows_dir))
 
 from dotenv import load_dotenv

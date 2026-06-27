@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows")
+workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows")
 sys.path.insert(0, str(workflows_dir))
 
 from google.adk.cli.utils.agent_loader import AgentLoader

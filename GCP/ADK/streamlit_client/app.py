@@ -264,7 +264,7 @@ def save_chat_and_traces_to_json(session_id, chat_history, trajectories):
     import json
     from pathlib import Path
     
-    log_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/logs")
+    log_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/logs")
     log_dir.mkdir(parents=True, exist_ok=True)
     json_path = log_dir / "chat_history.json"
     
@@ -335,7 +335,7 @@ def append_to_app_log(session_id, user_prompt, agent_responses):
     log_line += "-" * 80 + "\n\n"
     
     log_paths = [
-        Path("/Users/samaujs/Year_2026/GenAI/samples/logs/app.log")
+        Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/logs/app.log")
     ]
     
     for path in log_paths:
@@ -350,7 +350,7 @@ def parse_app_log():
     import re
     from pathlib import Path
     
-    log_path = Path("/Users/samaujs/Year_2026/GenAI/samples/logs/app.log")
+    log_path = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/logs/app.log")
     if not log_path.exists():
         try:
             log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -460,7 +460,7 @@ async def load_past_session_to_adk(session_id, chat_history):
             from google.adk.types import App
             from google.adk.platform.agent_loader import AgentLoader
             from pathlib import Path
-            workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows")
+            workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows")
             loader = AgentLoader(agents_dir=str(workflows_dir))
             agent_or_app = loader.load_agent(agent_name)
             session_app_name = agent_or_app.name if is_app_instance(agent_or_app) else agent_name

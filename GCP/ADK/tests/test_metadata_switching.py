@@ -2,11 +2,11 @@ import sys
 from pathlib import Path
 
 # Setup sys.path exactly as Streamlit client does
-samples_dir = Path("/Users/samaujs/Year_2026/GenAI/samples")
+samples_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK")
 sys.path.insert(0, str(samples_dir))
 
 selected_agent = {
-    "agents_dir": Path("/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows")
+    "agents_dir": Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows")
 }
 
 agent_parent = str(selected_agent["agents_dir"])

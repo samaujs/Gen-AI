@@ -53,8 +53,8 @@ sidebar_mock.button.return_value = False
 sys.modules['streamlit'] = st_mock
 
 # 2. Add paths
-workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows")
-client_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/streamlit_client")
+workflows_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows")
+client_dir = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/streamlit_client")
 sys.path.insert(0, str(workflows_dir))
 sys.path.insert(0, str(client_dir))
 
@@ -65,8 +65,8 @@ os.environ["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
 os.environ["MODEL_NAME"] = "gemini-3.1-flash-lite"
 
 # Clean up log files from previous runs to ensure clean test assertions
-json_path = Path("/Users/samaujs/Year_2026/GenAI/samples/logs/chat_history.json")
-logs_app_path = Path("/Users/samaujs/Year_2026/GenAI/samples/logs/app.log")
+json_path = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/logs/chat_history.json")
+logs_app_path = Path("/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/logs/app.log")
 
 for p in [json_path, logs_app_path]:
     if p.exists():

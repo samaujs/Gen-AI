@@ -83,7 +83,7 @@ weather_toolset = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
             command='/Users/samaujs/Year_2026/GenAI/VirtualEnv/gen_ai/bin/python',
-            args=['/Users/samaujs/Year_2026/GenAI/samples/google-adk-workflows/weather_server.py']
+            args=['/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows/weather_server.py']
         )
     )
 )
