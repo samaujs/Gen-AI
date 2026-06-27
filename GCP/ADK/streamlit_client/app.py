@@ -245,19 +245,46 @@ class SmartMemoryService(InMemoryMemoryService):
         response.memories = (prioritized + others)[:5]
         return response
 
-def make_serializable(obj):
-    if isinstance(obj, dict):
-        return {str(k): make_serializable(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)):
-        return [make_serializable(v) for v in obj]
-    if hasattr(obj, "model_dump") and callable(obj.model_dump):
-        return make_serializable(obj.model_dump())
-    if hasattr(obj, "dict") and callable(obj.dict):
-        return make_serializable(obj.dict())
+def make_serializable(obj, memo=None):
+    if memo is None:
+        memo = set()
+    
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
+        
+    obj_id = id(obj)
+    if obj_id in memo:
+        return "<circular reference>"
+        
+    if isinstance(obj, dict):
+        new_memo = memo | {obj_id}
+        return {str(k): make_serializable(v, new_memo) for k, v in obj.items()}
+        
+    if isinstance(obj, (list, tuple, set)):
+        new_memo = memo | {obj_id}
+        return [make_serializable(v, new_memo) for v in obj]
+        
+    if hasattr(obj, "model_dump") and callable(obj.model_dump):
+        new_memo = memo | {obj_id}
+        try:
+            return make_serializable(obj.model_dump(), new_memo)
+        except Exception:
+            pass
+            
+    if hasattr(obj, "dict") and callable(obj.dict):
+        new_memo = memo | {obj_id}
+        try:
+            return make_serializable(obj.dict(), new_memo)
+        except Exception:
+            pass
+            
     if hasattr(obj, "__dict__"):
-        return {str(k): make_serializable(v) for k, v in obj.__dict__.items() if not k.startswith('_')}
+        new_memo = memo | {obj_id}
+        try:
+            return {str(k): make_serializable(v, new_memo) for k, v in obj.__dict__.items() if not k.startswith('_')}
+        except Exception:
+            pass
+        
     return str(obj)
 
 def save_chat_and_traces_to_json(session_id, chat_history, trajectories):

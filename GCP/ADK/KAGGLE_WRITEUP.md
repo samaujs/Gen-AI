@@ -1,5 +1,7 @@
 # AI Agents Vibe Coding Capstone Project: ADK Agent Studio & Workflows Hub
 
+![ADK Cover Image](images/cover_image_flash3.5_org.png)
+
 ## Abstract
 In this writeup, we present the design, implementation, and optimization of the **ADK Agent Studio & Workflows Hub**—a multi-agent travel planning platform built with Google's **Agent Development Kit (ADK)**, the **Gemini API**, and the **Model Context Protocol (MCP)**. Our system leverages specialized, coordinated LLM-driven agents to resolve multi-variable, unstructured queries (such as scheduling flights, securing luxury accommodations, fetching real-time weather advisories, and planning relaxing sightseeing tours). The application features a premium Streamlit client supporting real-time response streaming, dynamic model selection, on-disk module hot-reloading, and robust observability.
 
