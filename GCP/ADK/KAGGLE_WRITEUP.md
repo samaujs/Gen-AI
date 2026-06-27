@@ -35,11 +35,13 @@ To integrate live data, we built a Model Context Protocol (MCP) server using the
 ### C. Streamlit Client (`streamlit_client/`)
 An interactive chat UI that connects to the runner. It allows users to input travel prompts, select agent workflows, swap underlying Gemini models, and hot-reload updated agent Python scripts on the fly.
 
-### D. Persistent Sessions & Long-Term Memory
-To enable multi-turn conversations and long-term memory across sessions, we implemented a persistent context management layer using the Google ADK:
-* **Short-Term Memory**: We preserve the runner's `InMemorySessionService` state inside Streamlit's `st.session_state`. By reusing the same `session_id` across turns, the ADK `Runner` automatically retrieves past conversational history and feeds it into subsequent LLM model turns.
-* **Long-Term Memory**: We instantiate an `InMemoryMemoryService` stored globally in `st.session_state`. At the end of every successful execution run, the session is ingested into the memory service using `await memory_service.add_session_to_memory(session)`.
-* **Memory Retrieval**: All sub-agents (Flight, Hotel, Weather, Sightseeing, and TripSummary agents) are bound with ADK's built-in `LoadMemoryTool()`. When the LLM detects that a user's prompt references past conversations or travel preferences (e.g. *"Use the same departure city as my last query"*), it invokes the `load_memory` function tool, which queries the memory service and injects relevant past details back into the agent context.
+### D. Persistent Sessions, Smart Memory & Chat Restoration
+To support persistent multi-turn conversations and long-term memory context retrieval across distinct application sessions, we implemented the following features:
+* **Short-Term Context & New Chat Routing**: The client isolates active chat sessions using a unique UUID-based `session_id` and persists the short-term `InMemorySessionService` state. A **"New chat"** action resets this session ID, wipes short-term context variables, and creates a fresh memory instance.
+* **Smart Long-Term Memory (`SmartMemoryService`)**: Built as a customized subclass of `InMemoryMemoryService`. It implements a domain-aware query stop-word filter that ignores conversational noise (e.g., *what*, *is*, *the*) but preserves travel-domain keywords (like *trip*, *plan*, *itinerary*), ensuring that keyword-based RAG queries consistently retrieve relevant historical summaries.
+* **Session Logging & Trace Persistence**: Each chat session's dialogue is formatted and appended turn-by-turn to a centralized conversation log (`logs/app.log`). In parallel, execution traces, reasoning steps, and trajectories are serialized to a structured JSON database (`logs/chat_history.json`) indexed by `session_id`.
+* **Dynamic Chat Session Restoration**: The sidebar includes a dropdown interface that parses historical conversation blocks from `logs/app.log`. When a previous session is selected and loaded, the backend programmatically feeds the past messages back into the ADK event stream to reconstruct the `InMemorySessionService` state, injects the events into the `SmartMemoryService` RAG bank, and immediately renders the conversation history so the user can seamlessly resume past chats.
+* **Structured Test Suites**: Relocated all unit and integration tests (such as `test_restore_chat.py` and `test_new_chat_logging.py`) into a dedicated `/tests` subdirectory to enforce professional repository standards.
 
 ---
 
