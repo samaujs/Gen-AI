@@ -11,8 +11,26 @@ samples/
 ├── .gitignore                    # Local environment files, pycache, and logs ignore patterns
 ├── README.md                     # Project documentation
 ├── logs/                         # Observability traces and execution logs
+│   ├── app.log                   # Combined multi-turn conversation logs
+│   ├── chat_history.json         # Session-based chat histories and trace JSON
 │   ├── observability_trace.txt   # Compiled agent communication logs
 │   └── nz_observability_trace.txt # Flight/hotel search communication logs
+├── tests/                        # Organized test scripts and unit checks
+│   ├── check_agent_class.py      # Basic class property inspection
+│   ├── check_env.py              # Environment settings check
+│   ├── check_fields.py           # Class field schema check
+│   ├── check_mode.py             # Basic config validation
+│   ├── check_simple_import.py    # Import paths verification
+│   ├── test_loader.py            # Workflow dynamic loader test
+│   ├── test_loader_exact.py      # Strict agent resolution test
+│   ├── test_mcp.py               # Weather MCP toolset test
+│   ├── test_memory_multi_turn.py # Long-Term memory turn-by-turn check
+│   ├── test_metadata_switching.py # Workspace dynamic switches check
+│   ├── test_new_chat_logging.py  # Session tracking and log format test
+│   ├── test_observability.py     # Trajectories and trace generation check
+│   ├── test_restore_chat.py      # Log parser & memory restoration test
+│   ├── test_simple.py            # Sequential workflow verification
+│   └── test_streaming.py         # Response token-streaming check
 ├── images/                       # High-resolution diagrams and screenshots
 │   ├── final_itinerary_screenshot.png # Streamlit UI final itinerary screenshot
 │   ├── observability_trace_screenshot.png # Streamlit UI observability trace screenshot
@@ -135,3 +153,8 @@ Here is a visual flowchart demonstrating how a user's prompt (e.g. "Book a fligh
 - **Cache Reloading**: Edit agent files locally and click **Reload Agent Source** to clear memory caches and load your new agent parameters immediately.
 - **Sub-Agent Live Logging**: View real-time status updates of intermediate agent runs (e.g. `FlightAgent` executing, `HotelAgent` booking) inside collapsed status drawers before the final compiled answer arrives.
 - **Observability Sequence Diagrams**: Creates sequence flow diagrams (`simple_agent_workflow.png` and `parallel_agent_workflow.png` in the `images/` directory) and detailed trajectory logs in the `logs/` directory.
+- **Long-Term Memory (`SmartMemoryService`)**: Remembers travel details (such as periods, locations, and flight/hotel bookings) across multi-turn sessions using Google ADK's long-term memory framework, filtered via a custom domain stop-word parser.
+- **New Chat Session Routing**: Sidebar includes a **"New chat"** button that starts a clean slate (resets in-memory state, wipes short-term context, initializes a fresh session ID, and provisions a brand-new memory bank).
+- **Turn-by-Turn Logging & Observability Persistence**: Saves multi-turn chat dialogues under `logs/app.log`, and serializes traces and trajectories under `logs/chat_history.json` grouped under unique `session_id` keys.
+- **Dynamic Chat Session Restoration**: Reads previous conversation turns from `logs/app.log`, displays them in a sidebar restore dropdown, reconstructs the historical ADK events list upon selection, loads them back into long-term memory, and streams the restored history back to the client interface so you can continue past chats seamlessly.
+- **Consolidated Tests Subdirectory**: A unified `/tests` folder organizes unit checks and integration scenarios (`test_restore_chat.py`, `test_new_chat_logging.py`, etc.) directly within the workspace.

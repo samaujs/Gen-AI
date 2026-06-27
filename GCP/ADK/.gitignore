@@ -164,3 +164,7 @@ Thumbs.db
 # Agent Development Kit (ADK)
 .adk/
 *.session.json
+
+# Local runtime logs
+logs/chat_history.json
+logs/app.log
