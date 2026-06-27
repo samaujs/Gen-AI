@@ -19,7 +19,7 @@ To address these challenges, we built the **ADK Agent Studio & Workflows Hub**, 
 ## 2. System Architecture
 Our workspace is divided into three key components: the **Agent Backend**, the **Model Context Protocol (MCP) Weather Server**, and the **Streamlit Web UI**.
 
-![System Architecture Breakdown](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/project_architecture.png)
+![System Architecture Breakdown](images/project_architecture.png)
 
 ### A. Multi-Agent Backend (`google-adk-workflows/`)
 Built on Google's ADK, the backend exposes five specialized LLM agents and four workflow coordinators:
@@ -48,17 +48,17 @@ To support persistent multi-turn conversations and long-term memory context retr
 ## 3. Workflow Execution Modes
 The platform implements four distinct multi-agent coordination topologies:
 
-![Multi-Agent Coordination Topologies](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/agent_topologies.png)
+![Multi-Agent Coordination Topologies](images/agent_topologies.png)
 
 ### A. Simple (Sequential Workflow)
 The orchestrator agent (`TripPlanner`) executes sub-agents sequentially. It acts as a central router, using `transfer_to_agent` to pass control from one specialist to the next, compiling the outputs step-by-step.
 
-![Simple Agent Workflow](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/simple_agent_workflow.png)
+![Simple Agent Workflow](images/simple_agent_workflow.png)
 
 ### B. Parallel (Concurrent Workflow)
 To dramatically reduce latency, independent queries (flight booking, hotel search, and weather details) run concurrently inside a parallel execution block, reducing total latency to that of the slowest single LLM call.
 
-![Parallel Agent Workflow](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/parallel_agent_workflow.png)
+![Parallel Agent Workflow](images/parallel_agent_workflow.png)
 
 ### C. Dispatcher Workflow
 Utilizes an intent router that dynamically maps user prompts to specific agents or toolsets, avoiding unnecessary sub-agent runs when a request only concerns a single domain (e.g. only flight pricing).
@@ -71,7 +71,7 @@ A quality assurance loop where a reviewer agent (`TripSummaryReviewer`) evaluate
 ## 4. High-Level Parallel Agent Architecture
 The concurrent execution flow utilizes a `SequentialAgent` as the main orchestrator (`ParallelWorkflow`), which delegates to a `ParallelAgent` block (`ParallelTripPlanner`). The high-level topology is illustrated below:
 
-![Parallel Agent Architecture Diagram](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/parallel_agent_architecture.png)
+![Parallel Agent Architecture Diagram](images/parallel_agent_architecture.png)
 
 ### Sequence of Operations:
 1. **User Query**: The User submits a prompt (e.g., "Create a 15-day luxury itinerary to New Zealand").
@@ -127,7 +127,7 @@ To verify the system, we ran automated verification scripts comparing sequential
 
 The final interface renders a beautiful, structured travel guide directly to the user:
 
-![Final Itinerary Screenshot](/Users/samaujs/.gemini/antigravity/brain/2e7e63e3-72f0-4aa5-94c2-d1e489ae71e3/final_itinerary_screenshot.png)
+![Final Itinerary Screenshot](images/final_itinerary_screenshot.png)
 
 ---
 
