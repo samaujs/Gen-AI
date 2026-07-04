@@ -82,8 +82,10 @@ from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams,
 weather_toolset = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
-            command='/Users/samaujs/Year_2026/GenAI/VirtualEnv/gen_ai/bin/python',
-            args=['/Users/samaujs/Year_2026/GenAI/samples/Gen-AI/GCP/ADK/google-adk-workflows/weather_server.py']
+            # /home/ubuntu/VirtualEnv/gen_ai_env/bin/python
+            command='python',
+            # /home/ubuntu/projects/Gen-AI/GCP/ADK/google-adk-workflows/weather_server.py 
+            args=['./google-adk-workflows/weather_server.py']
         )
     )
 )
