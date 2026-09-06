@@ -77,9 +77,9 @@ You can embed this diagram directly into your `README.md` by referencing the ima
 ```markdown
 ## Architecture & Workflow
 
-![Multi-Agent Architecture](assets/agent_workflow_architecture.png)
+![Multi-Agent Architecture](images/agent_workflow_architecture.png)
 ```
 
 File paths generated:
 - `docs/agent_workflow_architecture.png` (7950 x 4500 px, 300 DPI)
-- `assets/agent_workflow_architecture.png` (7950 x 4500 px, 300 DPI)
+- `images/agent_workflow_architecture.png` (7950 x 4500 px, 300 DPI)
