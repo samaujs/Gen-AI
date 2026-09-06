@@ -45,6 +45,16 @@ flowchart TD
 6. **Agent App (`course-creator`)**:
    - FastAPI server serving a responsive frontend with Server-Sent Events (SSE) streaming and OpenTelemetry Cloud Trace integration.
 
+### Agent Workflow Architecture
+
+The diagram below illustrates the end-to-end multi-agent orchestration, the iterative research and critique loop between the Researcher and Judge, and the dedicated GPU inference pipeline with Gemma:
+
+![Agent Workflow Architecture](images/agent_workflow_architecture.png)
+
+* **Stage 1 (Research & Evaluation Loop):** The Orchestrator initiates an iterative feedback loop (up to 3 iterations) where the **Researcher** gathers verified web context via Google Search, and the **Judge** performs deterministic schema-based grading.
+* **Stage 2 (Course Synthesis):** Once research passes evaluation, the Orchestrator escalates to the **Content Builder**, which prompts the self-hosted **Gemma 3 model on NVIDIA L4 GPU** via LiteLLM to compile the structured course module.
+* **Stage 3 (Streaming Delivery):** Lifecycle events and completed course markdown stream to the **Agent App** via Server-Sent Events (SSE).
+
 ---
 
 ## 📂 Project Structure
@@ -57,6 +67,10 @@ GCP/Gemma/multi-agent-system/
 ├── deploy.sh                # End-to-end automated deployment script for Cloud Run
 ├── pyproject.toml           # Python package configuration and dependencies (uv)
 ├── uv.lock                  # Pinned dependency lockfile
+├── images/                  # High-resolution architectural workflow diagrams
+│   └── agent_workflow_architecture.png
+├── docs/                    # Architectural reports & documentation
+│   └── workflow_architecture_report.md
 ├── ollama-backend/          # GPU backend service definition
 │   └── Dockerfile           # Ollama container image with pre-pulled Gemma model
 ├── agents/                  # ADK A2A Microservices
