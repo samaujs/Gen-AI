@@ -24,7 +24,7 @@ flowchart TD
     ContentBuilder -->|Final Course Module| Orchestrator
 ```
 
-### Microservice Architecture (6 Cloud Run Services)
+### Microservice Architecture (6 deployed services at Google Cloud Run)
 
 1. **Ollama Backend (`ollama-gemma-gpu`)**:
    - Runs Ollama on Cloud Run backed by an **NVIDIA L4 GPU**.

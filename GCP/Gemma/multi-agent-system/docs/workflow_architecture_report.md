@@ -2,7 +2,7 @@
 
 A high-resolution, publication-grade architectural diagram has been generated and saved to your repository.
 
-![Multi-Agent Workflow & Architecture](agent_workflow_architecture.png)
+![Multi-Agent Workflow & Architecture](../images/agent_workflow_architecture.png)
 
 ---
 
