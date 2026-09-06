@@ -221,5 +221,5 @@ Open **http://localhost:8000** in your browser to interact with the course creat
 
 ## 📚 References
 
-* [Google Cloud Platform DevRel Demos: Multi-Agent System](https://github.com/GoogleCloudPlatform/devrel-demos/tree/main/agents/multi-agent-system) — Reference architecture and demonstration for building multi-agent systems using Google Agent Development Kit (ADK) and Agent-to-Agent (A2A) microservices.
+[1] [Google Cloud Platform DevRel Demos: Multi-Agent System](https://github.com/GoogleCloudPlatform/devrel-demos/tree/main/agents/multi-agent-system)
 
