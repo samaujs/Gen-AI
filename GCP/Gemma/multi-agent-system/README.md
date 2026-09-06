@@ -216,3 +216,10 @@ Open **http://localhost:8000** in your browser to interact with the course creat
 *   **No Hardcoded Secrets**: All inter-service communications leverage short-lived Google OAuth2 Identity Tokens dynamically requested via IAM credentials.
 *   **Sanitized Configurations**: All sample files, scripts, and documentation use placeholder variables (`your-gcp-project-id`).
 *   **Exclusion Rules**: Local `.env` files, caches, and test artifacts are protected under `.gitignore`.
+
+---
+
+## 📚 References
+
+* [Google Cloud Platform DevRel Demos: Multi-Agent System](https://github.com/GoogleCloudPlatform/devrel-demos/tree/main/agents/multi-agent-system) — Reference architecture and demonstration for building multi-agent systems using Google Agent Development Kit (ADK) and Agent-to-Agent (A2A) microservices.
+
